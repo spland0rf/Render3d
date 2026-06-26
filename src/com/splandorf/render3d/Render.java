@@ -16,12 +16,8 @@ import javax.imageio.*;
 
 import java.awt.*;
 import java.awt.image.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.util.*;
 import java.io.*;
-
-import com.splandorf.render3d.MemMgr;
 import com.splandorf.render3d.math.*;
 import com.splandorf.render3d.scene.*;
 import com.splandorf.render3d.shader.*;
@@ -43,7 +39,7 @@ public class Render extends JPanel implements Runnable
 //    int [] _wu_array = null;
 
     static int _width  = 640;
-    int _height = 480;
+    static int _height = 480;
     int _bgcolor = 0;
     MemMgr _mgr = null;
     Thread _renderThread = null;
@@ -95,8 +91,8 @@ public class Render extends JPanel implements Runnable
         }
         System.out.println(")");
         Render me = new Render();
-        int w = me._width;
-        int h = me._height;
+        int w = Render._width;
+        int h = Render._height;
         me.init();
 
         me._jFrame = new JFrame();
@@ -966,10 +962,11 @@ public class Render extends JPanel implements Runnable
 		int cy = _height / 2;
 		float xm = (float)cx*(float)0.6;
 		float ym = (float)cy*(float)0.6;
+		/* 
 		int color = 0;
 		int red, green, blue, inten;
 		float fog;
-		
+		*/
 		Triangle t   = null;
 		Material mat = null;
 		
@@ -1091,7 +1088,7 @@ public class Render extends JPanel implements Runnable
 		) 
 	{
 		int color = 0;
-		int red, green, blue, inten;
+		int red, green, blue; /* inten; */
 		float fog;
 		Vec3f n  = MemMgr.Vec3f();
 	

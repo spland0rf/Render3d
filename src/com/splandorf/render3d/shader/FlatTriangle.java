@@ -550,7 +550,7 @@ public class FlatTriangle extends Shader {
 			dt = (rt-lt) / (rx-lx);
 		}
 		int texel = 0;
-		int zint = 0;
+//		int zint = 0;
 
 		// Clip against sides of screen
 		if (rx >= _width) rx = _width-1;

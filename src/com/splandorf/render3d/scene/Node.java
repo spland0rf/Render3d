@@ -1,8 +1,6 @@
 package com.splandorf.render3d.scene;
 
-import com.splandorf.render3d.scene.Ctm;
 import com.splandorf.render3d.Render;
-import com.splandorf.render3d.MemMgr;
 import com.splandorf.render3d.math.*;
 
 abstract class Node

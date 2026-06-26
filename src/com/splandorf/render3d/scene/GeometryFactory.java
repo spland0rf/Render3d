@@ -1,6 +1,5 @@
 package com.splandorf.render3d.scene;
 
-import com.splandorf.render3d.math.*;
 import com.splandorf.render3d.MemMgr;
 
 public class GeometryFactory
@@ -1077,12 +1076,12 @@ public class GeometryFactory
 		obj.addEdge( e16, 4, 1);
 		obj.addEdge( e17, 7, 2);
 		
-		Triangle t01 = MemMgr.Triangle();
-		Triangle t00 = MemMgr.Triangle();
+//		Triangle t01 = MemMgr.Triangle();
+//		Triangle t00 = MemMgr.Triangle();
 		Triangle t02 = MemMgr.Triangle();
 		Triangle t03 = MemMgr.Triangle();
-		Triangle t04 = MemMgr.Triangle();
-		Triangle t05 = MemMgr.Triangle();
+//		Triangle t04 = MemMgr.Triangle();
+//		Triangle t05 = MemMgr.Triangle();
 		Triangle t06 = MemMgr.Triangle();
 		Triangle t07 = MemMgr.Triangle();
 		Triangle t08 = MemMgr.Triangle();

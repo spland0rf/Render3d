@@ -1,7 +1,6 @@
 package com.splandorf.render3d.scene;
 
 import com.splandorf.render3d.math.*;
-import com.splandorf.render3d.scene.*;
 import com.splandorf.render3d.shader.*;
 import com.splandorf.render3d.*;
 import java.util.ArrayList;
