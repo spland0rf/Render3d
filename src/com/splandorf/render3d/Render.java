@@ -22,7 +22,7 @@ import VecSi;
 import Mat4f;
 import MemMgr;
 
-public class Render extends Applet implements Runnable
+public class Render extends JPanel 
 {
     MemoryImageSource mis = null;
     Image temp_image = null;
@@ -82,11 +82,116 @@ public class Render extends Applet implements Runnable
 
     Vector _transpQueue = null;
     
-    public Render()
+    BufferedImage smiley_image = null;
+    BufferedImage rgb_image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+    public static void main(String[] args) throws IOException {
+        System.out.print("Render.main( ");
+        for (int i = 0; i < args.length; i++) {
+            System.out.print(args[i] + ", ");
+        }
+        System.out.println(")");
+        Render me = new Render();
+        int w = me.width;
+        int h = me.height;
+        me.init( w, h);
+
+        JFrame frame = new JFrame();
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setSize(w, h);
+        frame.add(me);
+        frame.setVisible(true);
+
+        Thread animThread = new Thread() {
+            public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(10);
+                        frame.repaint();
+                    } catch (Exception e) {
+
+                    }
+                }
+            }
+        };
+        animThread.start();
+	}
+
+	public Render()
     {
 		_app = this;
     }
     
+
+	 public void init(int w, int h) {
+        _width = w;
+        _height = h;
+	 }
+
+	public void paint(Graphics gx)
+	{
+		System.out.println("Paint.");
+		rgb_image.setRGB(0, 0, _width, _height, _pix, 0, _width);
+        gx.drawImage( rgb_image, 0, 0, null);
+	}
+
+	public void start()
+	{
+		if (_renderThread == null)
+		{
+			_renderThread = new Thread(this);
+			_renderThread.;
+		}
+	}
+	
+	public void stop()
+	{
+		if (_renderThread != null)
+		{
+			_renderThread.stop();
+			_renderThread = null;
+		}
+	}
+
+	public void run()
+	{
+		long startTime = System.currentTimeMillis();
+		long oldTime = startTime;
+		long newTime = 0;
+		int  framerate = 0;
+		
+		System.arraycopy( _background, 0, _pix, 0, _height*_width);
+		System.arraycopy( _maxint_pix, 0, _zbuf, 0, _height*_width);
+		
+		float _time = (float)0.0;
+		int running = 0;
+		while (true) {
+			
+			renderScene( _time);
+			_time += 0.01;
+			
+			_renderThread.yield();
+			
+			//			try {
+			//			    _renderThread.sleep(2000);
+			//			} catch (Exception e) {}
+			
+			_garbage_counter++;
+			if (_garbage_counter>=50) {
+				System.gc();
+				_garbage_counter = 0;
+				framerate++;
+			}
+			if (framerate>=2) {
+				newTime = System.currentTimeMillis();
+				System.err.println("fps: " + (100000 / (newTime-oldTime)) );
+				oldTime = newTime;
+				framerate = 0;
+			}
+		}
+	}
+
+
 	public void init()
     {
 		_scene_root = new Group( "ROOT");
@@ -148,6 +253,41 @@ public class Render extends Applet implements Runnable
 		_wu_array = GeometryFactory.makeWuUnitPointArray( 8);
     }
 
+	public void renderScene( float cur_time)
+    {
+		if (_initialized) {
+			
+			System.arraycopy( _background, 0, _pix, 0, _height*_width);
+			System.arraycopy( _zero_pix, 0, _zbuf, 0, _height*_width);
+			
+			
+			//_incr = 10.0;
+			_incr += 0.01;
+			_from.z = (float)(Math.sin(_incr) * 3.5);
+			_from.x = (float)(Math.cos(_incr) * 5.5);
+			_from.y = (float) Math.sin(_incr * 5.0) * (float)2.0 + (float)0.0;
+			//_from.y = -(float)2.0;
+			
+			_cam_ctm.orient( _from, _at, _up);
+			
+			_scene_root.render( _cam_ctm.inv_ctm(), Alg.IDENT_MAT, cur_time );
+			
+			if (_transpQueue.size() > 0) {
+				renderTranspObjects();
+			}
+			
+			mis.newPixels( 0, 0, _width, _height);
+			
+			// Blit new image to offscreen buffer
+			//_buffer.getGraphics().drawImage( temp_image, 0, 0, this);
+			
+			// Blit offscreen buffer to _canvas
+			_canvas.getGraphics().drawImage( temp_image, 0, 0, this);
+			
+		} else {
+			initialize();
+		}
+    }
 
     public static int[] loadTexture( String filename, Material mat)
     {
@@ -296,6 +436,7 @@ public class Render extends Applet implements Runnable
 		}
 		return map;
 	}
+
 /**
  * Old initialize.  Keep around for funsies.
  * 
@@ -714,76 +855,8 @@ public class Render extends Applet implements Runnable
 		}
 	}
 
-	public void paint(Graphics gx)
-	{
-/*
-		System.err.println("Paint.");
-		gx.setColor(new Color( 255,200,200) );
-		gx.fillRect(0,0,this.size().width,this.size().height);
-		gx.setColor(new Color(150,0,0));
-		gx.drawString("rendering nightmare",10,20);
-		gx.drawLine(10,26,160,26);
-		gx.drawString("�1899 by Splandorf M.",10,42);
-*/
-	}
 
-	public void start()
-	{
-		if (_renderThread == null)
-		{
-			_renderThread = new Thread(this);
-			_renderThread.;
-		}
-	}
-	
-	public void stop()
-	{
-		if (_renderThread != null)
-		{
-			_renderThread.stop();
-			_renderThread = null;
-		}
-	}
-
-	public void run()
-	{
-		long startTime = System.currentTimeMillis();
-		long oldTime = startTime;
-		long newTime = 0;
-		int  framerate = 0;
-		
-		System.arraycopy( _background, 0, _pix, 0, _height*_width);
-		System.arraycopy( _maxint_pix, 0, _zbuf, 0, _height*_width);
-		
-		float _time = (float)0.0;
-		int running = 0;
-		while(true) {
-			
-			renderScene( _time);
-			_time += 0.01;
-			
-			_renderThread.yield();
-			
-			//			try {
-			//			    _renderThread.sleep(2000);
-			//			} catch (Exception e) {}
-			
-			_garbage_counter++;
-			if (_garbage_counter>=50) {
-				System.gc();
-				_garbage_counter = 0;
-				framerate++;
-			}
-			if (framerate>=2) {
-				newTime = System.currentTimeMillis();
-				System.err.println("fps: " + (100000 / (newTime-oldTime)) );
-				oldTime = newTime;
-				framerate = 0;
-			}
-		}
-	}
-
-		public void addToTranspQueue( Mat4f xform, Mat4f nxform, Obj obj)
+	public void addToTranspQueue( Mat4f xform, Mat4f nxform, Obj obj)
     {
 		_transpQueue.addElement( xform);
 		_transpQueue.addElement( nxform);
@@ -816,47 +889,6 @@ public class Render extends Applet implements Runnable
 			System.err.println("Error, wrong datatypes stored in transpQueue!");
 		}
     }
-
-	public void renderScene( float cur_time)
-    {
-		if (_initialized) {
-			
-			System.arraycopy( _background, 0, _pix, 0, _height*_width);
-			System.arraycopy( _zero_pix, 0, _zbuf, 0, _height*_width);
-			
-			
-			//_incr = 10.0;
-			_incr += 0.01;
-			_from.z = (float)(Math.sin(_incr) * 3.5);
-			_from.x = (float)(Math.cos(_incr) * 5.5);
-			_from.y = (float) Math.sin(_incr * 5.0) * (float)2.0 + (float)0.0;
-			//_from.y = -(float)2.0;
-			
-			_cam_ctm.orient( _from, _at, _up);
-			
-			_scene_root.render( _cam_ctm.inv_ctm(), Alg.IDENT_MAT, cur_time );
-			
-			if (_transpQueue.size() > 0) {
-				renderTranspObjects();
-			}
-			
-			mis.newPixels( 0, 0, _width, _height);
-			
-			// Blit new image to offscreen buffer
-			//_buffer.getGraphics().drawImage( temp_image, 0, 0, this);
-			
-			// Blit offscreen buffer to _canvas
-			_canvas.getGraphics().drawImage( temp_image, 0, 0, this);
-			
-		} else {
-			initialize();
-		}
-    }
-
-	public void draw( Mat4f c, Obj o)
-	{
-
-	}
 
 	public void illuminate( Vec3f n, Vec3f light)
 	{
