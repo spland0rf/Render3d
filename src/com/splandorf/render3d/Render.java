@@ -232,7 +232,10 @@ public class Render extends JPanel implements Runnable
 		makeBlendArray( _blue_color, _bgcolor, _blue_blend);
 		*/
 
-		_background = loadTexture( "textures/night_sky_background.jpg", null);
+		_background = loadTexture( "/textures/night_sky_background.jpg", null);
+		if (_background==null) {
+			_background = new int[_width*_height];
+		}
     }
 
 	public void renderScene( float cur_time)
@@ -277,17 +280,20 @@ public class Render extends JPanel implements Runnable
 		BufferedImage textImage = null;
         
         try {
+			if (!filename.startsWith("/")) {
+				filename = "/" + filename;
+			}
 			is = getClass().getResourceAsStream(filename);
             textImage = ImageIO.read(is);
             
-        } catch (IOException ex) {
+        } catch (Exception ex) {
 			System.err.println("Render.loadTexture(): Couldn't load " + filename);
             ex.printStackTrace();
             
         } finally {
             try {
                 is.close();  
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 ex.printStackTrace();
             }
         }
@@ -332,7 +338,7 @@ public class Render extends JPanel implements Runnable
 
 		int [] bump_map = new int[256*256];
 
-		if (height_map.length != 256*256) {
+		if (height_map == null || height_map.length != 256*256) {
 			System.err.println("Bump maps must be 256x256 pixels!");
 			// Return dummy bump map with all normals pointing straight out of the surface.
 			for (int i=0; i<256*256; i++) {
@@ -677,9 +683,9 @@ public class Render extends JPanel implements Runnable
 		texture._color = (255<<24) + (255<<16) + (100<<8) + 255;
 		//		texture.TEXTURE = true;
 		texture.SPEED = Material.FAST;
-		texture._env_map = loadTexture("res/environments/envplane.gif", texture);
+		texture._env_map = loadTexture("/environments/envplane.gif", texture);
 		//		texture._env_map = makeLightMap();
-		texture._bump_map = loadBumpMap( "textures/weave_height2.gif", texture);
+		texture._bump_map = loadBumpMap( "/textures/weave_height2.gif", texture);
 		texture._fog_R = 0;
 		texture._fog_G = 0;
 		texture._fog_B = 0;
@@ -724,7 +730,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "res/sprites/flare1.jpg", texture);
+		texture._texture = loadTexture( "/sprites/flare1.jpg", texture);
 		flare1.ctm().set_trans( (float)0.0, (float)2.7, (float)0.0);
 		flare1.mat = texture;
 		
@@ -734,7 +740,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "res/sprites/flare.jpg", texture);
+		texture._texture = loadTexture( "/sprites/flare.jpg", texture);
 		flare2.ctm().set_trans( (float)0.0, (float)-2.7, (float)0.0);
 		flare2.mat = texture;
 		
@@ -744,7 +750,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
+		texture._texture = loadTexture( "/sprites/flare3.jpg", texture);
 		flare3.ctm().set_trans( (float)0.0, (float)0.0, (float)2.7);
 		flare3.mat = texture;
 		
@@ -754,7 +760,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
+		texture._texture = loadTexture( "/sprites/flare3.jpg", texture);
 		flare4.ctm().set_trans( (float)0.0, (float)0.0, (float)-2.7);
 		flare4.mat = texture;
 		
