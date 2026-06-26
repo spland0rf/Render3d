@@ -12,37 +12,35 @@ package com.splandorf.render3d;
 
 
 import javax.swing.*;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
+import javax.imageio.*;
+
 import java.awt.*;
 import java.awt.image.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.*;
+import java.io.*;
+
+import com.splandorf.render3d.MemMgr;
+import com.splandorf.render3d.math.*;
+import com.splandorf.render3d.scene.*;
+import com.splandorf.render3d.shader.*;
 
 
-import Vec3f;
-import Vec3i;
-import VecSf;
-import VecSi;
-import Mat4f;
-import MemMgr;
-
-public class Render extends JPanel 
+public class Render extends JPanel implements Runnable
 {
 //    MemoryImageSource mis = null;
 //    Image temp_image = null;
     BufferedImage _framebuffer_image = null;
 	JFrame _jFrame = null;
 
-    int [] _wu_array = null;
-
-    int [] _zero_pix = null;
-    int [] _maxint_pix = null;
     int [] _pix = null;
     int [] _zbuf = null;
-    int [] _env_map = null;
+    int [] _zero_pix = null;
+    int [] _maxint_pix = null;
+//    int [] _env_map = null;
     int [] _background = null;
+//    int [] _wu_array = null;
 
     static int _width  = 640;
     int _height = 480;
@@ -54,8 +52,8 @@ public class Render extends JPanel
     double _incr = 0.0;
     int _garbage_counter = 0;
     
-    int SUBDIV_SIZE = 16;
-    int MAX24BIT = (255<<16) + (255<<8) + 255;
+    public static int SUBDIV_SIZE = 16;
+    public static int MAX24BIT = (255<<16) + (255<<8) + 255;
 
     Group _scene_root = null;
 
@@ -66,17 +64,19 @@ public class Render extends JPanel
     float _zoom = (float)1.3;
     
     // Light info
-    Vector _lights = null;
+    ArrayList<Light> _lights = null;
     float _amb_red   = (float)0.0;
     float _amb_green = (float)0.0;
     float _amb_blue  = (float)0.0;
     
     // Temporaries for testing:
+	/* 
     int [] _red_blend;
     int _red_color;
     int _blue_color;
     int [] _blue_blend;
-    
+    */
+
     Obj _obj1 = null;
     Obj _obj2 = null;
     Obj _obj3 = null;
@@ -86,7 +86,7 @@ public class Render extends JPanel
     Mat4f _temp_mat1 = null;
     Mat4f _temp_mat2 = null;
 
-    Vector _transpQueue = null;
+	ArrayList<Object> _transpQueue =  new ArrayList<Object>( 10);
 
     public static void main(String[] args) throws IOException {
         System.out.print("Render.main( ");
@@ -95,9 +95,9 @@ public class Render extends JPanel
         }
         System.out.println(")");
         Render me = new Render();
-        int w = me.width;
-        int h = me.height;
-        me.init( w, h);
+        int w = me._width;
+        int h = me._height;
+        me.init();
 
         me._jFrame = new JFrame();
         me._jFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -105,9 +105,9 @@ public class Render extends JPanel
         me._jFrame.add(me);
         me._jFrame.setVisible(true);
 
-        _renderThread = new Thread( this);
-		_running = true;
-        _renderThread.start();
+        me._renderThread = new Thread( me);
+		me._running = true;
+        me._renderThread.start();
 	}
 
 	public Render()
@@ -119,7 +119,7 @@ public class Render extends JPanel
 	public void paint(Graphics gx)
 	{
 		System.out.println("Paint.");
-}
+
 //		_framebuffer_image.setRGB(0, 0, _width, _height, _pix, 0, _width);
         gx.drawImage( _framebuffer_image, 0, 0, null);
 	}
@@ -161,7 +161,7 @@ public class Render extends JPanel
 			_time += 0.01;
 			
 			_jFrame.repaint();
-			_renderThread.yield();
+			Thread.yield();
 			
 			//			try {
 			//			    _renderThread.sleep(2000);
@@ -186,7 +186,6 @@ public class Render extends JPanel
 	public void init()
     {		
 		_scene_root = new Group( "ROOT");
-		_transpQueue = new Vector( 10);
 
 		//parseVRML();
 
@@ -238,8 +237,6 @@ public class Render extends JPanel
 		*/
 
 		_background = loadTexture( "textures/night_sky_background.jpg", null);
-
-		_wu_array = GeometryFactory.makeWuUnitPointArray( 8);
     }
 
 	public void renderScene( float cur_time)
@@ -278,7 +275,7 @@ public class Render extends JPanel
 		}
     }
 
-    public static int[] loadTexture( String filename, Material mat)
+    public int[] loadTexture( String filename, Material mat)
     {
         InputStream is = null; 
 		BufferedImage textImage = null;
@@ -307,7 +304,7 @@ public class Render extends JPanel
 		// Grab pixel array
 		int src_width = textImage.getWidth();
 		int src_height = textImage.getHeight();
-		int[] src_pixels = (DataBufferByte) textImage.getRaster().getDataBuffer()).getData();
+		int[] src_pixels = ((DataBufferByte) textImage.getRaster().getDataBuffer()).getData();
 		boolean hasAlphaChannel = textImage.getAlphaRaster() != null;
 		
 		if (hasAlphaChannel) {
@@ -333,7 +330,7 @@ public class Render extends JPanel
 		return src_pixels;
     }
 
-    public static int[] loadBumpMap( String filename, Material mat)
+    public int[] loadBumpMap( String filename, Material mat)
     {
 		int [] height_map = loadTexture( filename, mat);
 
@@ -388,15 +385,14 @@ public class Render extends JPanel
 		}
 		return bump_map;
     }
+
     
-    
-    
-    public void addLight( Light l)
+    public void addLight( com.splandorf.render3d.scene.Light l)
     {
 		VecSf s_dir = MemMgr.VecSf();
 		Alg.cart2sphere( l.dir, s_dir);
 		l.s_dir = s_dir;
-		_lights.addElement( l);
+		_lights.add( l);
     }
     
     public static float crop(float a, float b, float c)
@@ -442,7 +438,7 @@ public class Render extends JPanel
 		return map;
 	}
 
-/**
+/*
  * Old initialize.  Keep around for funsies.
  * 
 	public void initialize()
@@ -455,7 +451,7 @@ public class Render extends JPanel
 		_amb_red   = (float)0.3;
 		_amb_green = (float)0.2;
 		_amb_blue  = (float)0.2;
-		_lights = new Vector(10);
+		_lights = new ArrayList(10);
 
 		// Light #1
 		Light fresh_light = MemMgr.Light();
@@ -532,6 +528,7 @@ public class Render extends JPanel
 	}
 
 	*/
+
 	public void initScene()
 	{
 		System.err.println("init.");
@@ -542,7 +539,7 @@ public class Render extends JPanel
 		_amb_red   = (float)0.3;
 		_amb_green = (float)0.2;
 		_amb_blue  = (float)0.2;
-		_lights = new Vector(10);
+		_lights = new ArrayList<Light>(10);
 		
 		// Light #1
 		Light fresh_light = MemMgr.Light();
@@ -635,6 +632,7 @@ public class Render extends JPanel
 		wu_mat._gaussian_res = 32;
 		wu_mat._n_gaussian_dots = 20;
 		wu_mat._gaussian_dots = GeometryFactory.makeGaussianDotArrays( 32, 20);
+		wu_mat._wu_array = GeometryFactory.makeWuUnitPointArray( 8);
 		wu_mat._pointstyle = Material.GAUSSIAN;
 		wu_points.mat = wu_mat;
 		
@@ -835,7 +833,7 @@ public class Render extends JPanel
 
     }
     
-/** 
+/* 
 	protected void makeBlendArray( int color1, int color2, int [] colors)
 	{
 		
@@ -864,9 +862,9 @@ public class Render extends JPanel
 
 	public void addToTranspQueue( Mat4f xform, Mat4f nxform, Obj obj)
     {
-		_transpQueue.addElement( xform);
-		_transpQueue.addElement( nxform);
-		_transpQueue.addElement( obj);
+		_transpQueue.add( xform);
+		_transpQueue.add( nxform);
+		_transpQueue.add( obj);
     }
     
     protected void renderTranspObjects()
@@ -877,17 +875,17 @@ public class Render extends JPanel
 			Obj    obj;
 			
 			while (_transpQueue.size() > 0) {
-				xform  = (Mat4f)_transpQueue.elementAt(0);
-				nxform = (Mat4f)_transpQueue.elementAt(1);
-				obj    = (Obj)  _transpQueue.elementAt(2);
+				xform  = (Mat4f)_transpQueue.get(0);
+				nxform = (Mat4f)_transpQueue.get(1);
+				obj    = (Obj)  _transpQueue.get(2);
 				if (obj.mat.PARTICLE == true) {
-					Sprite.drawParticle( xform, obj);
+					Particle.drawParticle( xform, obj);
 				} else {
-					drawTriangles( xform, nxform, obj.tlist);
+					drawTriangles( xform, obj.tlist);
 				}
-				_transpQueue.removeElementAt(0);
-				_transpQueue.removeElementAt(0);
-				_transpQueue.removeElementAt(0);
+				_transpQueue.remove(0);
+				_transpQueue.remove(0);
+				_transpQueue.remove(0);
 				MemMgr.done( xform);
 				MemMgr.done( nxform);
 			}
@@ -905,7 +903,7 @@ public class Render extends JPanel
 		light.z = (float)0.0;
 
 		for (int i=0; i<_lights.size(); i++) {
-			l = (Light)_lights.elementAt(i);
+			l = (Light)_lights.get(i);
 			dot = -Alg.dot( l.dir, n);
 			if (dot > 0.0) {
 				light.x += dot * l.intensity * l.red;
@@ -932,7 +930,7 @@ public class Render extends JPanel
 		light.z = (float)0.0;
 
 		for (int i=0; i<_lights.size(); i++) {
-			l = (Light)_lights.elementAt(i);
+			l = (Light)_lights.get(i);
 			dot = -Alg.dot( l.s_dir, n);
 			if (dot > 0.0) {
 				light.x += dot * l.intensity * l.red;
@@ -950,76 +948,127 @@ public class Render extends JPanel
 		if (light.w > 1.0) light.w = (float)1.0;
 	}
 
-	public void drawTriangles( Mat4f m, Vector tlist)
-	{
+	public void drawTriangles( Mat4f m, ArrayList<Triangle> tlist)
+    {
 		Vec3f p1 = MemMgr.Vec3f();
 		Vec3f p2 = MemMgr.Vec3f();
 		Vec3f p3 = MemMgr.Vec3f();
-		Vec3f n  = MemMgr.Vec3f();
 		Vec3f c  = MemMgr.Vec3f();
+		
+		Vec3f test1  = MemMgr.Vec3f();
+		Vec3f test2  = MemMgr.Vec3f();
+		Vec3f test3  = MemMgr.Vec3f();
+			
 		Vec3f light = MemMgr.Vec3f();
 		Vec3f look = MemMgr.Vec3f( (float)0.0, (float)0.0, (float)-1.0);
 		Alg.mult( _cam_ctm.ctm(), look);
-		int cx = this.size().width / 2;
-		int cy = this.size().height / 2;
+		int cx = _width / 2;
+		int cy = _height / 2;
 		float xm = (float)cx*(float)0.6;
 		float ym = (float)cy*(float)0.6;
 		int color = 0;
 		int red, green, blue, inten;
 		float fog;
-
+		
 		Triangle t   = null;
 		Material mat = null;
-
-		for (int i=0; i<tlist.size(); i++) {
 		
+		for (int i=0; i<tlist.size(); i++) {
+			
 			// Find triangle normal
-			t = (Triangle)tlist.elementAt(i);
+			t = (Triangle)tlist.get(i);
 			mat = t.mat;
 			if (mat==null) {
 				mat = t.obj.mat;
 			}
-
-			//Alg.mult( t.obj.ctm().normal_ctm(), t.n, n);
-			//Alg.normalize( n);
-
-			// Find vector from eye to triangle centroid
-			Alg.mult( t.obj.ctm().inv_ctm(), _from, look);
-			Alg.sub( t.c, look);
-			Alg.normalize( look);
-			n = t.n;
+			Alg.mult( m, t.v1.p, p1);
+			Alg.mult( m, t.v2.p, p2);
+			Alg.mult( m, t.v3.p, p3);
 			
-			if ( mat.BACKFACE_CULL == false || Alg.dot( look, n) < 0.0) {
+			// Clip against viewport (drop triangles behind eye)
+			if (p1.z > 0.0 && p2.z > 0.0 && p3.z > 0.0 ) {
+			
+				float xf, yf;
 				
-				// If front-facing, then transform and render
-				Alg.mult( m, t.v1.p, p1);
-				Alg.mult( m, t.v2.p, p2);
-				Alg.mult( m, t.v3.p, p3);
+				// Calculate screen coordintes.  Store integer screen pixel location
+				// [0..width, 0..height], and 16-bit fixed-point subpixel remainder
+				// (to be used for subpixel-accurate rendering of lines and polygons].
+				
+				// X and Y coords must be calculated to accurately determine visibility.
+				// Z coords must only be calculated if polygon is indeed visible (later).
 
-				// Clip against viewport (drop triangles behind eye)
-				if (p1.z > 0.0 && p2.z > 0.0 && p3.z > 0.0) {
-					/*
-					Alg.mult( m, t.c, c);
-					int tx = cx + (int)(c.x / c.z * xm);
-					int ty = cy + (int)(c.y / c.z * ym);
-					if (tx>=0 && tx <_width && ty >= 0 && ty<_height) {
-						_pix[ tx + ty*_width] = (255<<24) + (255<<16) + (100<<8) + 100;
-						_zbuf[ tx+ty*_width] = 0;
-					}	
-					*/
-					t.v1.x = cx + (int)(p1.x / p1.z * xm);
-					t.v2.x = cx + (int)(p2.x / p2.z * xm);
-					t.v3.x = cx + (int)(p3.x / p3.z * xm);
-					t.v1.y = cy + (int)(p1.y / p1.z * ym);
-					t.v2.y = cy + (int)(p2.y / p2.z * ym);
-					t.v3.y = cy + (int)(p3.y / p3.z * ym);
+				// X-coords
+				xf     = (p1.x / p1.z * xm);
+				t.v1.x = (int)xf;
+				t.v1.xfrac = (int)( (xf - (float)t.v1.x) * (float)65536.0);
+				t.v1.x += cx;
+				xf     = (p2.x / p2.z * xm);
+				t.v2.x = (int)xf;
+				t.v2.xfrac = (int)( (xf - (float)t.v2.x) * (float)65536.0);
+				t.v2.x += cx;
+				xf     = (p3.x / p3.z * xm);
+				t.v3.x = (int)xf;
+				t.v3.xfrac = (int)( (xf - (float)t.v3.x) * (float)65536.0);
+				t.v3.x += cx;
+				
+				// Y-coords
+				yf     = (p1.y / p1.z * ym);
+				t.v1.y = (int)yf;
+				t.v1.yfrac = (int)( (yf - (float)t.v1.y) * (float)65536.0);
+				t.v1.y += cy;
+				yf     = (p2.y / p2.z * ym);
+				t.v2.y = (int)yf;
+				t.v2.yfrac = (int)( (yf - (float)t.v2.y) * (float)65536.0);
+				t.v2.y += cy;
+				yf     = (p3.y / p3.z * ym);
+				t.v3.y = (int)yf;
+				t.v3.yfrac = (int)( (yf - (float)t.v3.y) * (float)65536.0);
+				t.v3.y += cy;
+				
+				test1.x = (float)(t.v2.x - t.v1.x);
+				test1.y = (float)(t.v2.y - t.v1.y);
+				test1.z = (float)0.0;
+				test2.x = (float)(t.v3.x - t.v2.x);
+				test2.y = (float)(t.v3.y - t.v2.y);
+				test2.z = (float)0.0;
+
+				// Check to see if front-facing based on screen-space
+				// projection of ordered verts 1,2,3: are they
+				// clockwise (visible) or counterclockwise (invisible)?
+				// Note: cross-product of screen-space projected points determines
+				// ordering.  Positive = clockwise, negative = counterclockwise
+
+				Alg.normalize( test1);
+				Alg.normalize( test2);
+				Alg.cross( test1, test2, test3);
+					
+				if ( test3.z > -0.01 || mat.BACKFACE_CULL == false) {
+
+					// Z-calculations need only be done if polygon is to
+					// be rendered.
+				
+					// Z-coords, stored as integer value between [0..(MAXINT/1000)]
+					// This means that all z-values > 1000.0 will be in error.
 					t.v1.z = (int)( (p1.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
 					t.v2.z = (int)( (p2.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
 					t.v3.z = (int)( (p3.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
+					
+					// Calculate 1/z and store in 16-bit fixed-point format.
+					// [used for polygon scan-conversion, z-buffering, and such].
+					// 1/z is linear in screen-space.
 					t.v1.invz = (float)1.0 / p1.z;
 					t.v2.invz = (float)1.0 / p2.z;
 					t.v3.invz = (float)1.0 / p3.z;
-
+					t.v1.zbuf = (int)(t.v1.invz * (float)10000.0);
+					if (t.v1.zbuf > MAX24BIT) t.v1.zbuf = MAX24BIT;
+					if (t.v1.zbuf < 1) t.v1.zbuf = 1;
+					t.v2.zbuf = (int)(t.v2.invz * (float)10000.0);
+					if (t.v2.zbuf > MAX24BIT) t.v2.zbuf = MAX24BIT;
+					if (t.v2.zbuf < 1) t.v2.zbuf = 1;
+					t.v3.zbuf = (int)(t.v3.invz * (float)10000.0);
+					if (t.v3.zbuf > MAX24BIT) t.v3.zbuf = MAX24BIT;
+					if (t.v3.zbuf < 1) t.v3.zbuf = 1;
+		    		    
 					drawTriangleWithMaterial( t, p1, p2, p3, light, mat);
 				}
 			}	
@@ -1027,31 +1076,32 @@ public class Render extends JPanel
 		MemMgr.done( p1 );
 		MemMgr.done( p2 );
 		MemMgr.done( p3 );
-		MemMgr.done( n  );
 		MemMgr.done( c  );
 		MemMgr.done( light );
 		MemMgr.done( look );
 	}
 
-	public void drawTriangleWithMaterial(
+	public void drawTriangleWithMaterial (
 		Triangle t,
 		Vec3f p1,
 		Vec3f p2,
 		Vec3f p3,
 		Vec3f light,
 		Material mat
-	) {
+		) 
+	{
 		int color = 0;
 		int red, green, blue, inten;
 		float fog;
+		Vec3f n  = MemMgr.Vec3f();
 	
 		// TRANSP light model
-		if (mat._lightmodel == rMaterial.TRANSP) {
+		if (mat._lightmodel == Material.TRANSP) {
 			
-			SolidTriangle.drawTranspTriangle( t, mat);
-		}	
+			TranspTriangle.drawTranspTriangle( t, mat);
+		}
 		// PHONG lighting model (calculate specular highlights from each light source)
-i		else if (mat._lightmodel == Material.PHONG) {
+		else if (mat._lightmodel == Material.PHONG) {
 
 			// Get light contribution at vertex 1
 			color = mat._color;
@@ -1129,323 +1179,184 @@ i		else if (mat._lightmodel == Material.PHONG) {
 		// FOG lighting model (increasing blend w/ background color based on distance), textured or solid color
 		else if (mat._lightmodel == Material.FOG) {
 				
-				if (mat.TEXTURE == true) {
-					// This is to correct for the effect
-					// of a camera zoom factor on fog.
-					// We want fog to remain an illusion of
-					// constant world-space.  But adding
-					// a zoom factor to the camera moves
-					// points closer-to/farther-from the
-					// camera.  We want the points themselves
-					// to move, but we want fog calculated on
-					// them as if the zoom factor really were 1.0
+			// If FOG + texture
+			if (mat.TEXTURE == true) {
+				// This is to correct for the effect
+				// of a camera zoom factor on fog.
+				// We want fog to remain an illusion of
+				// constant world-space.  But adding
+				// a zoom factor to the camera moves
+				// points closer-to/farther-from the
+				// camera.  We want the points themselves
+				// to move, but we want fog calculated on
+				// them as if the zoom factor really were 1.0
 
-					p1.z *= _zoom;
-					p2.z *= _zoom;
-					p3.z *= _zoom;
-					// Get fog contribution at vertex 1
-					if (p1.z < mat._fog_near) {
-						fog = mat._fog_near_val;
-					} else if (p1.z > mat._fog_far) {
-						fog = mat._fog_far_val;
-					} else {
-						fog = (p1.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-						if (mat._fog_type == Material.SQUARE) fog *= fog;
-						fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-					}
-					t.v1.r = t.v1.g = t.v1.b = ((int)((float)255.0 * (1.0-fog))<<16);
-					// Get fog contribution at vertex 2
-					if (p2.z < mat._fog_near) {
-						fog = mat._fog_near_val;
-					} else if (p2.z > mat._fog_far) {
-						fog = mat._fog_far_val;
-					} else {
-						fog = (p2.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-						if (mat._fog_type == Material.SQUARE) fog *= fog;
-						fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-					}
-					t.v2.r = t.v2.g = t.v2.b = ((int)((float)255.0 * (1.0-fog))<<16);
-					// Get fog contribution at vertex 3
-					if (p3.z < mat._fog_near) {
-						fog = mat._fog_near_val;
-					} else if (p3.z > mat._fog_far) {
-						fog = mat._fog_far_val;
-					} else {
-						fog = (p3.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-						if (mat._fog_type == Material.SQUARE) fog *= fog;
-						fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-					}
-					t.v3.r = t.v3.g = t.v3.b = ((int)((float)255.0 * (1.0-fog))<<16);
-
-					if (mat.SPEED >= Material.FAST) {
-						GouraudTriangle.drawFastGouraudTextureTriangle( t, mat);
-					} else {
-						GouraudTriangle.drawGouraudTextureTriangle( t, mat);
-					}
-
+				p1.z *= _zoom;
+				p2.z *= _zoom;
+				p3.z *= _zoom;
+				// Get fog contribution at vertex 1
+				if (p1.z < mat._fog_near) {
+					fog = mat._fog_near_val;
+				} else if (p1.z > mat._fog_far) {
+					fog = mat._fog_far_val;
 				} else {
-
-					// Get fog contribution at vertex 1
-					color = mat._color;
-					// Get fog contribution at vertex 1
-					if (p1.z < mat._fog_near) {
-						fog = mat._fog_near_val;
-					} else if (p1.z > mat._fog_far) {
-						fog = mat._fog_far_val;
-					} else {
-						fog = (p1.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-						if (mat._fog_type == Material.SQUARE) fog *= fog;
-						fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-					}
-					t.v1.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_R) * fog )               ) << 16;
-					t.v1.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_G) * fog )               ) << 16;
-					t.v1.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_B) * fog )               ) << 16;
-
-					// Get fog contribution at vertex 2
-					if (p2.z < mat._fog_near) {
-						fog = mat._fog_near_val;
-					} else if (p2.z > mat._fog_far) {
-						fog = mat._fog_far_val;
-					} else {
-						fog = (p2.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-						if (mat._fog_type == Material.SQUARE) fog *= fog;
-						fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-					}
-					t.v2.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_R) * fog )               ) << 16;
-					t.v2.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_G) * fog )               ) << 16;
-					t.v2.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_B) * fog )               ) << 16;
-					// Get fog contribution at vertex 3
-					if (p3.z < mat._fog_near) {
-						fog = mat._fog_near_val;
-					} else if (p3.z > mat._fog_far) {
-						fog = mat._fog_far_val;
-					} else {
-						fog = (p3.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-						if (mat._fog_type == Material.SQUARE) fog *= fog;
-						fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-					}
-					t.v3.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_R) * fog )               ) << 16;
-					t.v3.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_G) * fog )               ) << 16;
-					t.v3.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
-								(int)((float)(mat._fog_B) * fog )               ) << 16;
-
-					GouraudTriangle.drawGouraudTriangle( t, mat);
+					fog = (p1.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
+					if (mat._fog_type == Material.SQUARE) fog *= fog;
+					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
 				}
-			} 
-			// FLAT lighting model (cosine of surface normal to all lights) - can be textured or solid color
-			else if (mat._lightmodel == Material.FLAT) {
-
-				if (mat.TEXTURE == true) {
-					
-					// Find light contribution to face.
-					illuminate( n, light);
-					
-					color = mat._color;
-					red   = (int)((float)255.0 * light.x);
-					green = (int)((float)255.0 * light.y);
-					blue  = (int)((float)255.0 * light.z);
-					if (red  >255) red   = 255;
-					if (green>255) green = 255;
-					if (blue >255) blue  = 255;
-					mat._dif_R = red;
-					mat._dif_G = green;
-					mat._dif_B = blue;
-					
-					if (mat.SPEED >= Material.FAST) {
-						FlatTriangle.drawFastFlatTextureTriangle( t, mat);
-					} else {
-						FlatTriangle.drawFlatTextureTriangle( t, mat);	
-					}
+				t.v1.r = t.v1.g = t.v1.b = ((int)((float)255.0 * (1.0-fog))<<16);
+				// Get fog contribution at vertex 2
+				if (p2.z < mat._fog_near) {
+					fog = mat._fog_near_val;
+				} else if (p2.z > mat._fog_far) {
+					fog = mat._fog_far_val;
 				} else {
+					fog = (p2.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
+					if (mat._fog_type == Material.SQUARE) fog *= fog;
+					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
+				}
+				t.v2.r = t.v2.g = t.v2.b = ((int)((float)255.0 * (1.0-fog))<<16);
+				// Get fog contribution at vertex 3
+				if (p3.z < mat._fog_near) {
+					fog = mat._fog_near_val;
+				} else if (p3.z > mat._fog_far) {
+					fog = mat._fog_far_val;
+				} else {
+					fog = (p3.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
+					if (mat._fog_type == Material.SQUARE) fog *= fog;
+					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
+				}
+				t.v3.r = t.v3.g = t.v3.b = ((int)((float)255.0 * (1.0-fog))<<16);
+
+				if (mat.SPEED >= Material.FAST) {
+					GouraudTriangle.drawFastGouraudTextureTriangle( t, mat);
+				} else {
+					GouraudTriangle.drawGouraudTextureTriangle( t, mat);
+				}
+
+			// If FOG + no texture (just solid color)
+			} else {
+
+				// Get fog contribution at vertex 1
+				color = mat._color;
+				// Get fog contribution at vertex 1
+				if (p1.z < mat._fog_near) {
+					fog = mat._fog_near_val;
+				} else if (p1.z > mat._fog_far) {
+					fog = mat._fog_far_val;
+				} else {
+					fog = (p1.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
+					if (mat._fog_type == Material.SQUARE) fog *= fog;
+					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
+				}
+				t.v1.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_R) * fog )               ) << 16;
+				t.v1.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_G) * fog )               ) << 16;
+				t.v1.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_B) * fog )               ) << 16;
+
+				// Get fog contribution at vertex 2
+				if (p2.z < mat._fog_near) {
+					fog = mat._fog_near_val;
+				} else if (p2.z > mat._fog_far) {
+					fog = mat._fog_far_val;
+				} else {
+					fog = (p2.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
+					if (mat._fog_type == Material.SQUARE) fog *= fog;
+					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
+				}
+				t.v2.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_R) * fog )               ) << 16;
+				t.v2.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_G) * fog )               ) << 16;
+				t.v2.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_B) * fog )               ) << 16;
+				// Get fog contribution at vertex 3
+				if (p3.z < mat._fog_near) {
+					fog = mat._fog_near_val;
+				} else if (p3.z > mat._fog_far) {
+					fog = mat._fog_far_val;
+				} else {
+					fog = (p3.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
+					if (mat._fog_type == Material.SQUARE) fog *= fog;
+					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
+				}
+				t.v3.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_R) * fog )               ) << 16;
+				t.v3.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_G) * fog )               ) << 16;
+				t.v3.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
+							(int)((float)(mat._fog_B) * fog )               ) << 16;
+
+				GouraudTriangle.drawGouraudTriangle( t, mat);
+			}
+		} 
+		// FLAT lighting model (cosine of surface normal to all lights) - can be textured or solid color
+		else if (mat._lightmodel == Material.FLAT) {
+
+			if (mat.TEXTURE == true) {
 				
-					// Find light contribution to face.
-					illuminate( n, light);
-					
-					color = mat._color;
-					red   = (int)((float)((color>>16) & 255) * light.x);
-					green = (int)((float)((color>>8 ) & 255) * light.y);
-					blue  = (int)((float)( color      & 255) * light.z);
-					if (red  >255) red   = 255;
-					if (green>255) green = 255;
-					if (blue >255) blue  = 255;
-					color = (255<<24) + (red<<16) + (green<<8) + (blue);
+				// Find light contribution to face.
+				illuminate( n, light);
 				
-					SolidTriangle.drawSolidTriangle( t, color, mat);
-				}
-			} 
-			// SOLID lighting model (constant color, no lighting contribution, but could be textured)
-			else if (mat._lightmodel == Material.SOLID) {
-
-				if (mat.TEXTURE == true) {
-					if (mat.SPEED >= Material.FAST) {
-						SolidTriangle.drawFastSolidTextureTriangle( t, mat);
-					} else {
-						SolidTriangle.drawSolidTextureTriangle( t, mat);	
-					}
+				color = mat._color;
+				red   = (int)((float)255.0 * light.x);
+				green = (int)((float)255.0 * light.y);
+				blue  = (int)((float)255.0 * light.z);
+				if (red  >255) red   = 255;
+				if (green>255) green = 255;
+				if (blue >255) blue  = 255;
+				mat._dif_R = red;
+				mat._dif_G = green;
+				mat._dif_B = blue;
+				
+				if (mat.SPEED >= Material.FAST) {
+					FlatTriangle.drawFastFlatTextureTriangle( t, mat);
 				} else {
-					SolidTriangle.drawSolidTriangle( t, mat._color, mat);
+					FlatTriangle.drawFlatTextureTriangle( t, mat);	
 				}
+			} else {
+			
+				// Find light contribution to face.
+				illuminate( n, light);
+				
+				color = mat._color;
+				red   = (int)((float)((color>>16) & 255) * light.x);
+				green = (int)((float)((color>>8 ) & 255) * light.y);
+				blue  = (int)((float)( color      & 255) * light.z);
+				if (red  >255) red   = 255;
+				if (green>255) green = 255;
+				if (blue >255) blue  = 255;
+				color = (255<<24) + (red<<16) + (green<<8) + (blue);
+			
+				SolidTriangle.drawSolidTriangle( t, color, mat);
+			}
+		} 
+		// SOLID lighting model (constant color, no lighting contribution, but could be textured)
+		else if (mat._lightmodel == Material.SOLID) {
+
+			if (mat.TEXTURE == true) {
+				if (mat.SPEED >= Material.FAST) {
+					SolidTriangle.drawFastSolidTextureTriangle( t, mat);
+				} else {
+					SolidTriangle.drawSolidTextureTriangle( t, mat);	
+				}
+			} else {
+				SolidTriangle.drawSolidTriangle( t, mat._color, mat);
 			}
 		}
+		MemMgr.done( n);
 	}
 
-
-	public void drawPointset( Mat4f m, Vector vlist, rMaterial mat)
+	public void drawPointset( Mat4f m, ArrayList<Vertex> vlist, Material mat)
     {
-		Vec3f p = MemMgr.Vec3f();
-		int cx = this.size().width / 2;
-		int cy = this.size().height / 2;
-		float xm = (float)cx*(float)0.6;
-		float ym = (float)cy*(float)0.6;
-		float realx;
-		float realy;
-		int fixedx;
-		int fixedy;
+		Particle.drawPointset( m, vlist, mat);
+	}
 
-		Vertex v;
-		
-		for (int i=0; i<vlist.size(); i++) {
-			
-			v = (Vertex)vlist.elementAt(i);
-			Alg.mult( m, v.p, p);
-			
-			if (p.z > (float)0.0) {
-
-				realx = (float)cx + (p.x / p.z * xm);
-				realy = (float)cy + (p.y / p.z * ym);
-				v.x = (int)realx;
-				v.y = (int)realy;
-				if (v.x > 0 && v.x < (_width-1) && v.y > 0 && v.y < (_height-1) ) {
-					fixedx = (int)((realx - (float)v.x) * 8.0);
-					fixedy = (int)((realy - (float)v.y) * 8.0);
-					
-					v.invz = (float)1.0 / p.z;
-					v.zbuf = (int)(v.invz * (float)10000.0);
-					if (v.zbuf > MAX24BIT) {
-						v.zbuf = MAX24BIT;
-					}
-					if (v.zbuf < 1) {
-						v.zbuf = 1;
-					}
-					
-					if (mat._pointstyle == mat.WU) {
-
-						Sprite.drawWuPoint( _wu_array, v, fixedx, fixedy, mat);
-					} 
-					else if (mat._pointstyle == mat.GAUSSIAN) {
-				
-						int scale = 0;
-						
-						if (v.invz < (float)1.0 && v.invz > (float)0.0) {
-							scale = mat._n_gaussian_dots-1 - (int)(v.invz * (float)mat._n_gaussian_dots);
-							int factor = (int)((float)255.0 * v.invz);
-							mat._f_red   = ((mat._near_red  *factor + mat._far_red  *(255-factor))>>8);
-							mat._f_green = ((mat._near_green*factor + mat._far_green*(255-factor))>>8);
-							mat._f_blue  = ((mat._near_blue *factor + mat._far_blue *(255-factor))>>8);
-						} else {
-							mat._f_red   = mat._near_red;
-							mat._f_green = mat._near_green;
-							mat._f_blue  = mat._near_blue;
-						}
-						//			System.err.println( "z-distance: " + p.z + "  map#:  " + scale);
-						mat._texture = mat._gaussian_dots[ scale];
-						mat._lightmodel = rMaterial.INTENSITY_FLARE;
-						mat._sprite_width = mat._gaussian_res;
-						mat._sprite_height = mat._gaussian_res;
-						//			mat._color = color;
-
-						int start_y = v.y - mat._gaussian_res / 2;
-						int end_y   = v.y + mat._gaussian_res / 2;
-						int start_x = v.x - mat._gaussian_res / 2;
-						int end_x   = v.x + mat._gaussian_res / 2;
-						
-						int sprite_y = 0;
-						
-						if (start_y > _height || end_y < 0 || start_x > _width || end_y < 0) {
-							return;
-						}
-						if (start_y < 0) {
-							sprite_y += -start_y;
-							start_y = 0;
-						}
-						if (end_y >= _height) {
-							end_y = _height-1;
-						}
-					
-						for (int l=start_y; l<end_y; l++) {
-							//			    System.err.print("x");
-							Sprite.drawSpriteSpan( l, sprite_y, start_x, end_x, v.zbuf, mat);
-							sprite_y++;
-						}
-					//			System.err.println("");
-					}
-				}
-			}
-		}
-		MemMgr.done( p);
-    }
-
-    public void drawWireframe( Mat4f m, Vector elist, rMaterial mat)
+    public void drawWireframe( Mat4f m, ArrayList<Edge> elist, Material mat)
     {
-		Vec3f p1 = MemMgr.Vec3f();
-		Vec3f p2 = MemMgr.Vec3f();
-		int cx = this.size().width / 2;
-		int cy = this.size().height / 2;
-		float xm = (float)cx*(float)0.6;
-		float ym = (float)cy*(float)0.6;
-		
-		Edge e;
-		
-		for (int i=0; i<elist.size(); i++) {
-			
-			e = (Edge)elist.elementAt(i);
-			Alg.mult( m, e.v1.p, p1);
-			Alg.mult( m, e.v2.p, p2);
-			
-			e.v1.x = cx + (int)(p1.x / p1.z * xm);
-			e.v2.x = cx + (int)(p2.x / p2.z * xm);
-			e.v1.y = cy + (int)(p1.y / p1.z * ym);
-			e.v2.y = cy + (int)(p2.y / p2.z * ym);
-			//			e.v1.z = (int)( (p1.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
-			//			e.v2.z = (int)( (p2.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
-			e.v1.invz = (float)1.05 / p1.z;
-			e.v2.invz = (float)1.05 / p2.z;
-			e.v1.zbuf = (int)(e.v1.invz * (float)10000.0);
-			if (e.v1.zbuf > MAX24BIT) e.v1.zbuf = MAX24BIT;
-			if (e.v1.zbuf < 1) e.v1.zbuf = 1;
-			e.v2.zbuf = (int)(e.v2.invz * (float)10000.0);
-			if (e.v2.zbuf > MAX24BIT) e.v2.zbuf = MAX24BIT;
-			if (e.v2.zbuf < 1) e.v2.zbuf = 1;
-			
-			if (mat._linestyle == rMaterial.THICK) {
-				float thick = p1.z;
-				if (thick < 2.0) {
-					thick = (float)3.1 - (thick*(float)1.0);
-				} else {
-					thick = (float)1.1;
-				}
-
-				Line.drawAntiAliasedLine( e, thick, mat._color);
-			} 
-			else if (mat._linestyle == rMaterial.WU) {
-
-				Line.drawWuLine( e, mat._color);
-
-			} else if (mat._linestyle == rMaterial.PIXEL) {
-
-				Line.drawSolidLine( e, mat._color);
-			}
-		}
-		MemMgr.done( p1);
-		MemMgr.done( p2);
-    }
+		Line.drawWireframe( m, elist, mat);
+	}
 }
 

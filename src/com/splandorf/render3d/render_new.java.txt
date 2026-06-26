@@ -11,6 +11,9 @@
 import java.applet.*;
 import java.awt.*;
 import java.util.*;
+
+import com.splandorf.render3d.math.Alg;
+
 import java.awt.image.*;
 import java.io.*;
 import java.net.*;

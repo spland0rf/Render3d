@@ -1,30 +1,25 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-//=========================================
-//
-// CTM -- composite transformation matrix
-//
-//=========================================
+import com.splandorf.render3d.*;
+import com.splandorf.render3d.math.*;
 
-import com.splandorf.render3d.Alg;
-import com.splandorf.render3d.MemMgr;
 
 public class Ctm
 {
-	protected Vec3f _scale      = null;
-	protected Vec3f _center     = null;
-	protected Mat4f _rot        = null;
-	protected Vec3f _trans      = null;
-	protected Mat4f _ctm        = null;
-	protected Vec3f _inv_scale  = null;
-	protected Vec3f _inv_center = null;
-	protected Mat4f _inv_rot    = null;
-	protected Vec3f _inv_trans  = null;
-	protected Mat4f _inv_ctm    = null;
-	protected Mat4f _transp     = null;
+	public Vec3f _scale      = null;
+	public Vec3f _center     = null;
+	public Mat4f _rot        = null;
+	public Vec3f _trans      = null;
+	public Mat4f _ctm        = null;
+	public Vec3f _inv_scale  = null;
+	public Vec3f _inv_center = null;
+	public Mat4f _inv_rot    = null;
+	public Vec3f _inv_trans  = null;
+	public Mat4f _inv_ctm    = null;
+	public Mat4f _transp     = null;
 
-	protected boolean _inv_dirty = true;
-	protected boolean _dirty     = true;
+	public boolean _inv_dirty = true;
+	public boolean _dirty     = true;
 
 	public Ctm()
 	{

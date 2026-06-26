@@ -1,8 +1,112 @@
 package com.splandorf.render3d.shader;
 
-public class Sprite extends Shader {
+import java.util.ArrayList;
+
+import com.splandorf.render3d.MemMgr;
+import com.splandorf.render3d.Render;
+import com.splandorf.render3d.math.*;
+import com.splandorf.render3d.scene.*;
+
+
+public class Particle extends Shader {
+
+    public static void drawPointset( Mat4f m, ArrayList<Vertex> vlist, Material mat)
+    {
+		Vec3f p = MemMgr.Vec3f();
+		int cx = _width / 2;
+		int cy = _height / 2;
+		float xm = (float)cx*(float)0.6;
+		float ym = (float)cy*(float)0.6;
+		float realx;
+		float realy;
+		int fixedx;
+		int fixedy;
+
+		Vertex v;
+		
+		for (int i=0; i<vlist.size(); i++) {
+			
+			v = (Vertex)vlist.get(i);
+			Alg.mult( m, v.p, p);
+			
+			if (p.z > (float)0.0) {
+
+				realx = (float)cx + (p.x / p.z * xm);
+				realy = (float)cy + (p.y / p.z * ym);
+				v.x = (int)realx;
+				v.y = (int)realy;
+				if (v.x > 0 && v.x < (_width-1) && v.y > 0 && v.y < (_height-1) ) {
+					fixedx = (int)((realx - (float)v.x) * 8.0);
+					fixedy = (int)((realy - (float)v.y) * 8.0);
+					
+					v.invz = (float)1.0 / p.z;
+					v.zbuf = (int)(v.invz * (float)10000.0);
+					if (v.zbuf > Render.MAX24BIT) {
+						v.zbuf = Render.MAX24BIT;
+					}
+					if (v.zbuf < 1) {
+						v.zbuf = 1;
+					}
+					
+					if (mat._pointstyle == Material.WU) {
+
+						Particle.drawWuPoint( v, fixedx, fixedy, mat);
+					} 
+					else if (mat._pointstyle == Material.GAUSSIAN) {
+				
+						int scale = 0;
+						
+						if (v.invz < (float)1.0 && v.invz > (float)0.0) {
+							scale = mat._n_gaussian_dots-1 - (int)(v.invz * (float)mat._n_gaussian_dots);
+							int factor = (int)((float)255.0 * v.invz);
+							mat._f_red   = ((mat._near_red  *factor + mat._far_red  *(255-factor))>>8);
+							mat._f_green = ((mat._near_green*factor + mat._far_green*(255-factor))>>8);
+							mat._f_blue  = ((mat._near_blue *factor + mat._far_blue *(255-factor))>>8);
+						} else {
+							mat._f_red   = mat._near_red;
+							mat._f_green = mat._near_green;
+							mat._f_blue  = mat._near_blue;
+						}
+						//			System.err.println( "z-distance: " + p.z + "  map#:  " + scale);
+						mat._texture = mat._gaussian_dots[ scale];
+						mat._lightmodel = Material.INTENSITY_FLARE;
+						mat._sprite_width = mat._gaussian_res;
+						mat._sprite_height = mat._gaussian_res;
+						//			mat._color = color;
+
+						int start_y = v.y - mat._gaussian_res / 2;
+						int end_y   = v.y + mat._gaussian_res / 2;
+						int start_x = v.x - mat._gaussian_res / 2;
+						int end_x   = v.x + mat._gaussian_res / 2;
+						
+						int sprite_y = 0;
+						
+						if (start_y > _height || end_y < 0 || start_x > _width || end_y < 0) {
+							return;
+						}
+						if (start_y < 0) {
+							sprite_y += -start_y;
+							start_y = 0;
+						}
+						if (end_y >= _height) {
+							end_y = _height-1;
+						}
+					
+						for (int l=start_y; l<end_y; l++) {
+							//			    System.err.print("x");
+							Particle.drawSpriteSpan( l, sprite_y, start_x, end_x, v.zbuf, mat);
+							sprite_y++;
+						}
+					//			System.err.println("");
+					}
+				}
+			}
+		}
+		MemMgr.done( p);
+    }
+
   
-    public void drawParticle( Mat4f m, Obj obj)
+    public static void drawParticle( Mat4f m, Obj obj)
     {
 		Vec3f loc = MemMgr.Vec3f( (float)0.0, (float)0.0, (float)0.0);
 		
@@ -10,19 +114,21 @@ public class Sprite extends Shader {
 		
 		if (loc.z < (float)0.0) return;
 		
-		int cx = this.size().width / 2;
-		int cy = this.size().height / 2;
+		int cx = _width / 2;
+		int cy = _height / 2;
 		float xm = (float)cx*(float)0.6;
 		float ym = (float)cy*(float)0.6;
 		int x    = cx + (int)(loc.x / loc.z * xm);
 		int y    = cy + (int)(loc.y / loc.z * ym);
 		int zbuf = (int)((float)10000.0 / loc.z);
-		if (zbuf > MAX24BIT) zbuf = MAX24BIT;
+		if (zbuf > Render.MAX24BIT) {
+            zbuf = Render.MAX24BIT;
+        }
 		if (zbuf < 1) zbuf = 1;
 		
-		rMaterial mat = obj.mat;
+		Material mat = obj.mat;
 		
-		if (mat._lightmodel == rMaterial.FLARE || mat._lightmodel == rMaterial.SPRITE)  {
+		if (mat._lightmodel == Material.FLARE || mat._lightmodel == Material.SPRITE)  {
 			
 			int start_y = y - mat._sprite_height / 2;
 			int end_y   = y + mat._sprite_height / 2;
@@ -47,7 +153,7 @@ public class Sprite extends Shader {
 				sprite_y++;
 			}
 			
-		} else if (mat._lightmodel == rMaterial.BILLBOARD) {
+		} else if (mat._lightmodel == Material.BILLBOARD) {
 			// Implement billboard, i.e.: simple blit of the sprite with
             // no transparency?
 		}
@@ -56,7 +162,7 @@ public class Sprite extends Shader {
     }
 
      // Fast!  No texture correction!
-    public void drawSpriteSpan( int y, int sprite_y, int lx, int rx, int z, rMaterial mat)
+    public static void drawSpriteSpan( int y, int sprite_y, int lx, int rx, int z, Material mat)
     {
         int r, g, b, scol, pcol;
         int sexel = mat._sprite_width * sprite_y;
@@ -75,7 +181,7 @@ public class Sprite extends Shader {
         for (int i=lx; i<rx; i++) {
             if ( z > _zbuf[ pixel ] ) {
             
-                if (mat._lightmodel == rMaterial.FLARE) {
+                if (mat._lightmodel == Material.FLARE) {
                     
                     scol = mat._texture[ sexel ];
                     pcol = _pix[ pixel ];
@@ -87,7 +193,7 @@ public class Sprite extends Shader {
                     if (b>255) b=255;
                     _pix[ pixel] = (255<<24) + (r<<16) + (g<<8) + b;    
                 } 
-                else if (mat._lightmodel == rMaterial.INTENSITY_FLARE) {
+                else if (mat._lightmodel == Material.INTENSITY_FLARE) {
                     
                     scol = (mat._texture[ sexel ])&255;
                     pcol = _pix[ pixel ];
@@ -99,7 +205,7 @@ public class Sprite extends Shader {
                     if (b>255) b=255;
                     _pix[ pixel] = (255<<24) + (r<<16) + (g<<8) + b;    
                 } 
-                else if (mat._lightmodel == rMaterial.SPRITE) {
+                else if (mat._lightmodel == Material.SPRITE) {
                     
                     _pix[ pixel ] = mat._texture[ sexel];
                 }
@@ -110,7 +216,9 @@ public class Sprite extends Shader {
     }
 
 
-    public void drawWuPoint( Vertex v, int xoff, int yoff, rMaterial mat)
+
+
+    public static void drawWuPoint( Vertex v, int xoff, int yoff, Material mat)
     {
 		//	System.out.println("---------------------------------------");
 		int wuoffset=0, wucolors=0, wu_00=0, wu_01=0, wu_10=0, wu_11=0, wu_red=0, wu_green=0, wu_blue=0;
@@ -121,7 +229,7 @@ public class Sprite extends Shader {
 		//System.err.println("X: " + v.x + "  Y: " + v.y + "  xoff: " + xoff + "  yoff: " + yoff);
 
 		try {
-		    wucolors = _wu_array[wuoffset];
+		    wucolors = mat._wu_array[wuoffset];
 		} catch (Exception e) {
 			System.out.println("Problem with _wu_array: " + xoff + " "  + yoff);
 			e.printStackTrace();

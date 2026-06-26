@@ -1,9 +1,12 @@
 package com.splandorf.render3d.shader;
 
-class BumpTriangle extends Shader
+import com.splandorf.render3d.scene.*;
+
+
+public class BumpTriangle extends Shader
 {
 
-	  public void bumpTriangle( Triangle t, rMaterial mat)
+	public void bumpTriangle( Triangle t, Material mat)
     {
 	// Order vertices {v1,v2,v3} by increasing Y
 	Vertex v1 = t.v1;
@@ -86,7 +89,9 @@ class BumpTriangle extends Shader
 		if (dy_1_2 != 0) {
 		    
 		    for (int i=v1.y; i<v2.y; i++) {
-			if (i>0 && i<_height) bumpSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, ls, rs, lt, rt, color, mat);
+			if (i>0 && i<_height) {
+				drawBumpSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, ls, rs, lt, rt, color, mat);
+			}
 			lx += dx_1_3;
 			rx += dx_1_2;
 			lz += dz_1_3;
@@ -117,7 +122,9 @@ class BumpTriangle extends Shader
 		if (dy_2_3 != 0) {
 		    
 		    for (int i=v2.y; i<v3.y; i++) {
-			if (i>0 && i<_height) bumpSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, ls, rs, lt, rt, color, mat);
+			if (i>0 && i<_height) {
+				drawBumpSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, ls, rs, lt, rt, color, mat);
+			}
 			lx += dx_1_3;
 			rx += dx_2_3;
 			lz += dz_1_3;
@@ -134,9 +141,11 @@ class BumpTriangle extends Shader
 		}
     }
     
-    public void bumpSpan( int y, int lx, int rx, int lz, int rz,
-			  int la, int ra, int lb, int rb, int ls, int rs,
-			  int lt, int rt, int color, rMaterial mat)
+    public static void drawBumpSpan( 
+		int y, int lx, int rx, int lz, int rz,
+		int la, int ra, int lb, int rb, int ls, int rs,
+		int lt, int rt, int color, Material mat
+		)
     {
 		// Make sure we're drawing left->right.
 		// (Scan conversion algorithm can send
@@ -217,7 +226,7 @@ class BumpTriangle extends Shader
     
 	/** 
 	 * 
-	 * I don't think any of the coce below belongs in this file, but I found it here,
+	 * I don't think any of the code below belongs in this file, but I found it here,
 	 * so I'm being paranoid about deleting it.  I think it was mis-copied earlier from
 	 * render_new.java when trying to break that out into separate files.
 	 * Clues: there is no method called "solidBumpTriangle" in render_new.java, and the

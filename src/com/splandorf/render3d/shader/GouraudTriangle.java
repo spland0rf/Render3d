@@ -1,75 +1,11 @@
 package com.splandorf.render3d.shader;
 
+import com.splandorf.render3d.Render;
+import com.splandorf.render3d.scene.*;
+
 public class GouraudTriangle extends Shader 
 {
-/**
-
-					} else if (mat._lightmodel == Material.GOURAUD) {
-						
-						if (mat.TEXTURE == true) {
-
-							// Get light contribution at vertex 1
-							color = mat._color;
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-							Alg.normalize( n);
-							illuminate( n, light);
-							t.v1.r = ((int)((float)255.0 * light.x)<<16);
-							t.v1.g = ((int)((float)255.0 * light.y)<<16);
-							t.v1.b = ((int)((float)255.0 * light.z)<<16);
-							// Get light contribution at vertex 2
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-							Alg.normalize( n);
-							illuminate( n, light);
-							t.v2.r = ((int)((float)255.0 * light.x)<<16);
-							t.v2.g = ((int)((float)255.0 * light.y)<<16);
-							t.v2.b = ((int)((float)255.0 * light.z)<<16);
-							// Get light contribution at vertex 3
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-							Alg.normalize( n);
-							illuminate( n, light);
-							t.v3.r = ((int)((float)255.0 * light.x)<<16);
-							t.v3.g = ((int)((float)255.0 * light.y)<<16);
-							t.v3.b = ((int)((float)255.0 * light.z)<<16);
-						
-							if (mat.SPEED >= Material.FAST) {
-								fastGouraudTextureTriangle( t, mat);
-							} else {
-								gouraudTextureTriangle( t, mat);
-							}
-
-						} else {
-
-							// Get light contribution at vertex 1
-							color = mat._color;
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-							Alg.normalize( n);
-							illuminate( n, light);
-							t.v1.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
-							t.v1.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
-							t.v1.b = ((int)((float)( color      & 255) * light.z)<<16);
-							// Get light contribution at vertex 2
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-							Alg.normalize( n);
-							illuminate( n, light);
-							t.v2.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
-							t.v2.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
-							t.v2.b = ((int)((float)( color      & 255) * light.z)<<16);
-							// Get light contribution at vertex 3
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-							Alg.normalize( n);
-							illuminate( n, light);
-							t.v3.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
-							t.v3.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
-							t.v3.b = ((int)((float)( color      & 255) * light.z)<<16);
-
-							gouraudTriangle( t, mat);
-						}
-
-//=====================
-*/
-
-
-	public static void gouraudTriangle( Triangle t, Material mat)
+	public static void drawGouraudTriangle( Triangle t, Material mat)
 	{
 		// Order vertices {v1,v2,v3} by increasing Y
 		Vertex v1 = t.v1;
@@ -136,7 +72,9 @@ public class GouraudTriangle extends Shader
 		if (dy_1_2 != 0) {
 
 			for (int i=v1.y; i<v2.y; i++) {
-				if (i>0 && i<_height) gouraudSpan( i, lx>>16, rx>>16, lz, rz, lr, rr, lg, rg, lb, rb, mat);
+				if (i>0 && i<_height) {
+					drawGouraudSpan( i, lx>>16, rx>>16, lz, rz, lr, rr, lg, rg, lb, rb, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_1_2;
 				lz += dz_1_3;
@@ -164,7 +102,9 @@ public class GouraudTriangle extends Shader
 		if (dy_2_3 != 0) {
 
 			for (int i=v2.y; i<v3.y; i++) {
-				if (i>0 && i<_height) gouraudSpan( i, lx>>16, rx>>16, lz, rz, lr, rr, lg, rg, lb, rb, mat);
+				if (i>0 && i<_height) {
+					drawGouraudSpan( i, lx>>16, rx>>16, lz, rz, lr, rr, lg, rg, lb, rb, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_2_3;
 				lz += dz_1_3;
@@ -180,8 +120,10 @@ public class GouraudTriangle extends Shader
 	}
 
 
-	public void gouraudSpan( int y, int lx, int rx, int lz, int rz, int lr, int rr,
-		int lg, int rg, int lb, int rb, Material mat)
+	public static void drawGouraudSpan( 
+		int y, int lx, int rx, int lz, int rz, int lr, int rr,
+		int lg, int rg, int lb, int rb, Material mat
+		)
 	{
 		// Make sure we're drawing left->right.
 		// (Scan conversion algorithm can send 
@@ -264,7 +206,7 @@ public class GouraudTriangle extends Shader
 
 
 	// Slow! Texture-corrects every pixel!
-	public static void gouraudTextureTriangle( Triangle t, Material mat)
+	public static void drawGouraudTextureTriangle( Triangle t, Material mat)
 	{
 		// Order vertices {v1,v2,v3} by increasing Y
 		Vertex v1 = t.v1;
@@ -351,9 +293,9 @@ public class GouraudTriangle extends Shader
 			for (int i=v1.y; i<v2.y; i++) {
 				if (i>0 && i<_height) {
 					if (mat.SPEED == Material.SLOW) {
-						gouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+						drawGouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
 					} else if (mat.SPEED == Material.FAST16) {
-						fast16gouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+						drawFast16gouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
 					}
 				}
 				lx += dx_1_3;
@@ -391,9 +333,9 @@ public class GouraudTriangle extends Shader
 			for (int i=v2.y; i<v3.y; i++) {
 				if (i>0 && i<_height) {
 					if (mat.SPEED == Material.SLOW) {
-						gouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+						drawGouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
 					} else if (mat.SPEED == Material.FAST16) {
-						fast16gouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+						drawFast16gouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
 					}
 				}
 				lx += dx_1_3;
@@ -415,10 +357,11 @@ public class GouraudTriangle extends Shader
 	}
 
 	// Slow!  Texture-corrects every pixel!
-	public void gouraudTextureSpan( int y, int lx, int rx, float lz, float rz, 
-									float ls, float rs, float lt, float rt, 
-									int lr, int rr, int lg, int rg, int lb, int rb, 
-									Material mat)
+	public static void drawGouraudTextureSpan( 
+		int y, int lx, int rx, float lz, float rz, 
+		float ls, float rs, float lt, float rt, 
+		int lr, int rr, int lg, int rg, int lb, int rb, 
+		Material mat)
 	{
 		// Make sure we're drawing left->right.
 		// (Scan conversion algorithm can send 
@@ -563,10 +506,11 @@ public class GouraudTriangle extends Shader
 	}
 
 		// Medium!  Texture-corrects every 16 pixels!
-	public static void fast16gouraudTextureSpan( int y, int lx, int rx, float lz, float rz, 
-									float ls, float rs, float lt, float rt, 
-									int lr, int rr, int lg, int rg, int lb, int rb, 
-									Material mat)
+	public static void drawFast16gouraudTextureSpan( 
+		int y, int lx, int rx, float lz, float rz, 
+		float ls, float rs, float lt, float rt, 
+		int lr, int rr, int lg, int rg, int lb, int rb, 
+		Material mat)
 	{
 		// Make sure we're drawing left->right.
 		// (Scan conversion algorithm can send 
@@ -634,8 +578,8 @@ public class GouraudTriangle extends Shader
 			b += -lx * db;
 			lx = 0;
 		}
-		int subdivs   = (rx-lx) / SUBDIV_SIZE;
-		int remainder = (rx-lx) % SUBDIV_SIZE;
+		int subdivs   = (rx-lx) / Render.SUBDIV_SIZE;
+		int remainder = (rx-lx) % Render.SUBDIV_SIZE;
 
 		float ZCONV = (float)(Integer.MAX_VALUE) / (float)1000.0;
 		float rzf = z;
@@ -662,9 +606,9 @@ public class GouraudTriangle extends Shader
 		// As many SUBDIV-sized pixel chunks as fit into the span.
 		for (int k=0; k<subdivs; k++) {
 						
-			rzf += dz * (float)SUBDIV_SIZE;
-			rsf += ds * (float)SUBDIV_SIZE;
-			rtf += dt * (float)SUBDIV_SIZE;
+			rzf += dz * (float)Render.SUBDIV_SIZE;
+			rsf += ds * (float)Render.SUBDIV_SIZE;
+			rtf += dt * (float)Render.SUBDIV_SIZE;
 			zi  =  rzi;
 			si  =  rsi;
 			ti  =  rti;
@@ -677,11 +621,11 @@ public class GouraudTriangle extends Shader
 				rsi = 0;
 				rti = 0;
 			}
-			dzi = (rzi - zi) / SUBDIV_SIZE;
-			dsi = (rsi - si) / SUBDIV_SIZE;
-			dti = (rti - ti) / SUBDIV_SIZE;
+			dzi = (rzi - zi) / Render.SUBDIV_SIZE;
+			dsi = (rsi - si) / Render.SUBDIV_SIZE;
+			dti = (rti - ti) / Render.SUBDIV_SIZE;
 
-			for (int i=0; i<SUBDIV_SIZE; i++) {
+			for (int i=0; i<Render.SUBDIV_SIZE; i++) {
 
 				if ( zi < _zbuf[ pixel ] ) {
 					texel = mat._texture[ (si>>9)%128 + ((ti>>9)%128)*128 ];				
@@ -840,7 +784,7 @@ public class GouraudTriangle extends Shader
 
 
 	// Fast! Incorrect z interpolation!
-	public static void fastGouraudTextureTriangle( Triangle t, Material mat)
+	public static void drawFastGouraudTextureTriangle( Triangle t, Material mat)
 	{
 		// Order vertices {v1,v2,v3} by increasing Y
 		Vertex v1 = t.v1;
@@ -925,8 +869,9 @@ public class GouraudTriangle extends Shader
 		if (dy_1_2 != 0) {
 
 			for (int i=v1.y; i<v2.y; i++) {
-				if (i>0 && i<_height) 
-					fastGouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+				if (i>0 && i<_height) {
+					drawFastGouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_1_2;
 				lz += dz_1_3;
@@ -960,8 +905,9 @@ public class GouraudTriangle extends Shader
 		if (dy_2_3 != 0) {
 
 			for (int i=v2.y; i<v3.y; i++) {
-				if (i>0 && i<_height) 
-					fastGouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+				if (i>0 && i<_height) {
+					drawFastGouraudTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, lr, rr, lg, rg, lb, rb, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_2_3;
 				lz += dz_1_3;
@@ -981,10 +927,11 @@ public class GouraudTriangle extends Shader
 	}
 
 	// Fast!  Incorrect z interpolation!
-	public void fastGouraudTextureSpan( int y, int lx, int rx, int lz, int rz, 
-									int ls, int rs, int lt, int rt, 
-									int lr, int rr, int lg, int rg, int lb, int rb, 
-									Material mat)
+	public static void drawFastGouraudTextureSpan( 
+		int y, int lx, int rx, int lz, int rz, 
+		int ls, int rs, int lt, int rt, 
+		int lr, int rr, int lg, int rg, int lb, int rb, 
+		Material mat)
 	{
 		// Make sure we're drawing left->right.
 		// (Scan conversion algorithm can send 

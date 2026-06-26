@@ -1,12 +1,14 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-import com.splandorf.render3d.Ctm;
-import com.splandorf.render3d.Node;
-import com.splandorf.render3d.Render;
+import com.splandorf.render3d.*;
+import com.splandorf.render3d.scene.*;
+import com.splandorf.render3d.math.*;
+import com.splandorf.render3d.math.Mat4f;
+import java.util.ArrayList;
 
-class Group extends Node
+public class Group extends Node
 {
-    public Vector children = new Vector(10);;
+    public ArrayList<Node> children = new ArrayList<Node>(10);
 
     public Group(String new_name)
     {
@@ -17,10 +19,9 @@ class Group extends Node
         super();
     }
 
-    public void addChild( rNode rNode)
+    public void addChild( Node node)
     {
-        super();
-	    children.addElement( rNode);
+	    children.add( node);
     }
 
     public void render( Render rend, Mat4f xform, Mat4f nxform, float time)
@@ -31,9 +32,9 @@ class Group extends Node
         Alg.mult( ctm().ctm(), xform, my_xform);
         Alg.mult( ctm().normal_ctm(), nxform, my_n_xform);
 
-        rNode child;
+        Node child;
         for (int i=0; i<children.size(); i++) {
-            child = (rNode)children.elementAt(i);
+            child = (Node)children.get(i);
             child.render( rend, my_xform, my_n_xform, time);
         }
 

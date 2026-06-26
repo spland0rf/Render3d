@@ -1,36 +1,38 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
+
+import com.splandorf.render3d.math.*;
 
 public class Triangle extends Object
 {
-	Vertex v1;
-	Vertex v2;
-	Vertex v3;
+	public Vertex v1;
+	public Vertex v2;
+	public Vertex v3;
 
-	Edge e1;
-	Edge e2;
-	Edge e3;
+	public Edge e1;
+	public Edge e2;
+	public Edge e3;
 
-	float s1;
-	float t1;
-	float s2;
-	float t2;
-	float s3;
-	float t3;
+	public float s1;
+	public float t1;
+	public float s2;
+	public float t2;
+	public float s3;
+	public float t3;
 
-	int bs1;
-	int bt1;
-	int bs2;
-	int bt2;
-	int bs3;
-	int bt3;
+	public int bs1;
+	public int bt1;
+	public int bs2;
+	public int bt2;
+	public int bs3;
+	public int bt3;
 
-	Vec3f c;
-	Vec3f n;
+	public Vec3f c;
+	public Vec3f n;
 
-	Material mat = null;
-	Obj obj;
+	public Material mat = null;
+	public Obj obj;
 
-	Triangle next;
+	public Triangle next;
 
 	public void setTexture( float s1, float t1, float s2, float t2, float s3, float t3)
 	{

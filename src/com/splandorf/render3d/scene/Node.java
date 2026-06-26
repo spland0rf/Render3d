@@ -1,7 +1,9 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-import com.splandorf.render3d.Ctm;
-import com.splandoorf.render3d.Render;
+import com.splandorf.render3d.scene.Ctm;
+import com.splandorf.render3d.Render;
+import com.splandorf.render3d.MemMgr;
+import com.splandorf.render3d.math.*;
 
 abstract class Node
 {
@@ -10,12 +12,12 @@ abstract class Node
     
     public Node(String new_name)
     {
-        ctm = MemMgr.Ctm();
+        ctm = new Ctm();
         name = new_name;
     }
 
     public Node() {
-        ctm = MemMgr.Ctm();
+        ctm = new Ctm();
     }
 
     public void setName(String new_name)

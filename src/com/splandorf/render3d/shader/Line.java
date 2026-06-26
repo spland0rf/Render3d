@@ -1,147 +1,72 @@
 package com.splandorf.render3d.shader;
 
+import java.util.ArrayList;
+
+import com.splandorf.render3d.MemMgr;
+import com.splandorf.render3d.Render;
+import com.splandorf.render3d.math.Alg;
+import com.splandorf.render3d.math.Mat4f;
+import com.splandorf.render3d.math.Vec3f;
+import com.splandorf.render3d.scene.*;
+
 public class Line extends Shader
 {
-	/** 
-	public static void solidLine( Edge e, int color)
-	{
-		// Make sure x2 lies to the right of x1
-		Vertex v1 = e.v1;
-		Vertex v2 = e.v2;
-		Vertex temp;
-		if (v1.x > v2.x) {
-			temp = v1;
-			v1 = v2;
-			v2 = temp;
-		}
 
-		int x = v1.x;
-		int y = v1.y;
-		int z = v1.z;
-		int incrementor = 0;
-
-		int dx = v2.x - v1.x;
-		int dy = v2.y - v1.y;
-		int dz = v2.z - v1.z;
-
-		if (dx == 0 && dy == 0) return;
-
-		int pixel = x + y * _width;
-
-		// Top two cases: slope >1 or slope <1, but dY+
-		if (dy>0) {
+	public static void drawWireframe( Mat4f m, ArrayList<Edge> elist, Material mat)
+    {	
+		Vec3f p1 = MemMgr.Vec3f();
+		Vec3f p2 = MemMgr.Vec3f();
+		int cx = _width / 2;
+		int cy = _height / 2;
+		float xm = (float)cx*(float)0.6;
+		float ym = (float)cy*(float)0.6;
+		
+		Edge e;
+		
+		for (int i=0; i<elist.size(); i++) {
 			
-			// Upper right quarter, slope >1
-			if (dy > dx) {
-
-				dz /= dy;
-				while (y<=v2.y) {
-					if (x>=0 && x<_width && y>=0 && y<_height) {
-						if ( z < _zbuf[ pixel ] ) { 
-							try {
-								_pix [ pixel ] = color;
-								_zbuf[ pixel ] = z;
-							} catch (Exception j) {
-								System.err.println("1: " + x + " " + y + " " + pixel);
-							}
-						}
-					}
-					y++;
-					z += dz;
-					pixel += _width;
-					incrementor += dx;
-					if (incrementor >= dy) {
-						incrementor -= dy;
-						pixel++;
-						x++;
-					}
-				}
-					
-			// Upper right quarter, slope <1
-			} else {
-
-				dz /= dx;
-				while (x<=v2.x) {
-					if (x>=0 && x<_width && y>=0 && y<_height) {
-						if ( z < _zbuf[ pixel ] ) { 
-							try {
-								_pix [ pixel ] = color;
-								_zbuf[ pixel ] = z;
-							} catch (Exception j) {
-								System.err.println("1: " + x + " " + y + " " + pixel);
-							}
-						}
-					}
-					x++;
-					z += dz;
-					pixel++;
-					incrementor += dy;
-					if (incrementor >= dx) {
-						incrementor -= dx;
-						y++;
-						pixel += _width;
-					}
-				}
-			}
-
-		// Bottom two cases: slope >-1 or slope <-1, but dY-
-		} else {
-
-			// Lower right quarter, slope <-1
-			if (dx < -dy) {
-
-				dz /= -dy;
-				while (y>=v2.y) {
-					if (x>=0 && x<_width && y>=0 && y<_height) {
-						if ( z < _zbuf[ pixel ] ) { 
-							try {
-								_pix [ pixel ] = color;
-								_zbuf[ pixel ] = z;
-							} catch (Exception j) {
-								System.err.println("1: " + x + " " + y + " " + pixel);
-							}
-						}
-					}
-					y--;
-					z += dz;
-					pixel -= _width;
-					incrementor += dx;
-					if (incrementor >= -dy) {
-						incrementor -= -dy;
-						x++;
-						pixel++;
-					}
+			e = (Edge)elist.get(i);
+			Alg.mult( m, e.v1.p, p1);
+			Alg.mult( m, e.v2.p, p2);
+			
+			e.v1.x = cx + (int)(p1.x / p1.z * xm);
+			e.v2.x = cx + (int)(p2.x / p2.z * xm);
+			e.v1.y = cy + (int)(p1.y / p1.z * ym);
+			e.v2.y = cy + (int)(p2.y / p2.z * ym);
+			//			e.v1.z = (int)( (p1.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
+			//			e.v2.z = (int)( (p2.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
+			e.v1.invz = (float)1.05 / p1.z;
+			e.v2.invz = (float)1.05 / p2.z;
+			e.v1.zbuf = (int)(e.v1.invz * (float)10000.0);
+			if (e.v1.zbuf > Render.MAX24BIT) e.v1.zbuf = Render.MAX24BIT;
+			if (e.v1.zbuf < 1) e.v1.zbuf = 1;
+			e.v2.zbuf = (int)(e.v2.invz * (float)10000.0);
+			if (e.v2.zbuf > Render.MAX24BIT) e.v2.zbuf = Render.MAX24BIT;
+			if (e.v2.zbuf < 1) e.v2.zbuf = 1;
+			
+			if (mat._linestyle == Material.THICK) {
+				float thick = p1.z;
+				if (thick < 2.0) {
+					thick = (float)3.1 - (thick*(float)1.0);
+				} else {
+					thick = (float)1.1;
 				}
 
-			// Lower right quarter, slope >-1
-			} else {
+				Line.drawAntiAliasedLine( e, thick, mat._color);
+			} 
+			else if (mat._linestyle == Material.WU) {
 
-				dz /= dx;
-				while (x<=v2.x) {
-					if (x>=0 && x<_width && y>=0 && y<_height) {
-						if ( z < _zbuf[ pixel ] ) { 
-							try {
-								_pix [ pixel ] = color;
-								_zbuf[ pixel ] = z;
-							} catch (Exception j) {
-								System.err.println("1: " + x + " " + y + " " + pixel);
-							}
-						}
-					}
-					x++;
-					z += dz;
-					pixel++;
-					incrementor += -dy;
-					if (incrementor >= dx) {
-						incrementor -= dx;
-						y--;
-						pixel -= _width;
-					}
-				}
+				Line.drawWuLine( e, mat._color);
+
+			} else if (mat._linestyle == Material.PIXEL) {
+
+				Line.drawSolidLine( e, mat._color);
 			}
 		}
-	}
-		*/
+		MemMgr.done( p1);
+		MemMgr.done( p2);
+    }
+
 
 	public static void drawSolidLine( Edge e, int color)
     {
@@ -355,7 +280,7 @@ public class Line extends Shader
 							b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
 							_pix [ pixel +1] = (255<<24) + (r<<16) + (g<<8) + b;
 						} catch (Exception j) {
-						S	ystem.err.println("1: " + x + " " + y + " " + pixel);
+							System.err.println("1: " + x + " " + y + " " + pixel);
 						}
 					}
 				}
@@ -772,6 +697,7 @@ public class Line extends Shader
 		}
     }	
 
+	/** 
 	public static void drawColorLine( int x1, int y1, int x2, int y2, float z1, float z2, Material mat)
 	{
 		// Make sure x2 lies to the right of x1
@@ -917,6 +843,7 @@ public class Line extends Shader
 			}
 		}
 	}
+		*/
 
 
 

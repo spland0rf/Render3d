@@ -4,7 +4,7 @@ public class Shader extends Object {
     protected static int _width  = 0;
 	protected static int _height = 0;
 	protected static int [] _pix = null;
-	protected float [] _zbuf = null;
+	protected static float [] _zbuf = null;
 
 	public static void initShader( int width, int height, int [] pix, float [] zbuf)
 	{

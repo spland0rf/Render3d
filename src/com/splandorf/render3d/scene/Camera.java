@@ -1,7 +1,6 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-
-class Camera
+public class Camera
 {
     int [] _pix = null;
 

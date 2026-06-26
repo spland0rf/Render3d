@@ -1,4 +1,4 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.math;
 
 //================================================================
 //
@@ -10,9 +10,9 @@ package com.splandorf.render3d;
 // (c) zbigniew mufosowicz -- 1899
 //================================================================
 
-import MemMgr;
+import com.splandorf.render3d.MemMgr;
 
-public class Alg extends Object
+public class Alg
 {
 	//Trigonometry
 	public static Vec3f temp1 = null;
@@ -25,6 +25,10 @@ public class Alg extends Object
 	public static float ARCSIN[] = new float [2048];
 	public static float ARCCOS[] = new float [2048];
 	public static float ARCTAN[] = new float [2048];
+	public static Mat4f IDENT_MAT = MemMgr.Mat4f( (float)1.0, (float)0.0, (float)0.0, (float)0.0,
+									   (float)0.0, (float)1.0, (float)0.0, (float)0.0,
+									   (float)0.0, (float)0.0, (float)1.0, (float)0.0,
+									   (float)0.0, (float)0.0, (float)0.0, (float)1.0);
 	final public static float PI=(float)3.14159265;
 	final public static float PI2=(float)2.0*PI;
 	final public static float RAD_TO_TABLE = (float)2048.0 / PI2;
@@ -861,96 +865,5 @@ public class Alg extends Object
 		a.z = z;
 	}
 
-}
-
-class Vec3f 
-{
-	float x;
-	float y;
-	float z;
-	float w;
-
-	public Vec3f( float x, float y, float z)
-	{
-		this.x = x;
-		this.y = y;
-		this.z = z;
-	}
-	public Vec3f()
-	{
-		this.x = (float)0.0;
-		this.y = (float)0.0;
-		this.z = (float)0.0;
-	}
-
-	Vec3f next;
-}
-
-class Vec3i 
-{
-	int x;
-	int y;
-	int z;
-	int w;
-
-	Vec3i next;
-}
-
-class VecSf
-{
-	float a;
-	float b;
-
-	VecSf next;
-}
-
-class VecSi
-{
-	int a;
-	int b;
-
-	VecSi next;
-}
-
-class Mat4f
-{
-	float m00;
-	float m01;
-	float m02;
-	float m03;
-	float m10;
-	float m11;
-	float m12;
-	float m13;
-	float m20;
-	float m21;
-	float m22;
-	float m23;
-	float m30;
-	float m31;
-	float m32;
-	float m33;
-
-	public Mat4f()
-	{
-		m00 = (float)1.0;
-		m11 = (float)1.0;
-		m22 = (float)1.0;
-		m33 = (float)1.0;
-		m01 = (float)0.0;
-		m02 = (float)0.0;
-		m03 = (float)0.0;
-		m10 = (float)0.0;
-		m12 = (float)0.0;
-		m13 = (float)0.0;
-		m20 = (float)0.0;
-		m21 = (float)0.0;
-		m23 = (float)0.0;
-		m30 = (float)0.0;
-		m31 = (float)0.0;
-		m32 = (float)0.0;
-	}
-
-	Mat4f next;
 }
 

@@ -1,27 +1,33 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-class Obj extends Object
+import com.splandorf.render3d.math.*;
+import com.splandorf.render3d.scene.*;
+import com.splandorf.render3d.shader.*;
+import com.splandorf.render3d.*;
+import java.util.ArrayList;
+
+public class Obj extends Node
 {
-	public Ctm ctm;
 	public Material mat;
-	public Vector  vlist;
-	public Vector  elist;
-	public Vector  tlist;
+	public ArrayList<Vertex> vlist;
+	public ArrayList<Edge> elist;
+	public ArrayList<Triangle> tlist;
 	public Obj next;
 
 	public Obj( String name)
     {
-		super( new_name);
-		vlist = new Vector(50);
-		elist = new Vector(50);
-		tlist = new Vector(50);
+		super( name);
+		vlist = new ArrayList<Vertex>(50);
+		elist = new ArrayList<Edge>(50);
+		tlist = new ArrayList<Triangle>(50);
     }
-	public Obj( String name)
+
+	public Obj()
     {
 		super();
-		vlist = new Vector(50);
-		elist = new Vector(50);
-		tlist = new Vector(50);
+		vlist = new ArrayList<Vertex>(50);
+		elist = new ArrayList<Edge>(50);
+		tlist = new ArrayList<Triangle>(50);
     }
 
 	public Ctm ctm()
@@ -31,17 +37,17 @@ class Obj extends Object
 
 	public Vertex v( int i)
 	{
-		return (Vertex)vlist.elementAt(i);
+		return (Vertex)vlist.get(i);
 	}
 
 	public Edge e( int i)
 	{
-		return (Edge)elist.elementAt(i);
+		return (Edge)elist.get(i);
 	}
 
 	public Triangle t( int i)
 	{
-		return (Triangle)tlist.elementAt(i);
+		return (Triangle)tlist.get(i);
 	}
 
 	public void render( Render rend, Mat4f xform, Mat4f nxform, float time)
@@ -56,14 +62,14 @@ class Obj extends Object
 			if (mat._lightmodel == Material.FLARE) {
 				rend.addToTranspQueue( my_xform, my_n_xform, this);
 			} else if (mat._lightmodel == Material.SPRITE) {
-				rend.drawParticle( my_xform, this);
+				Particle.drawParticle( my_xform, this);
 			}
 		} else {
 			if ( mat.TRIANGLES == true) {
 				if (mat._lightmodel == Material.TRANSP ) {
 					rend.addToTranspQueue( my_xform, my_n_xform, this);
 				} else {
-					rend.drawTriangles( my_xform, my_n_xform, tlist);
+					rend.drawTriangles( my_xform, tlist);
 				}
 			}
 			if ( mat.WIREFRAME == true) {
@@ -79,22 +85,22 @@ class Obj extends Object
 			MemMgr.done( my_n_xform);
 		}
     }
-}
+
 	public void addVertex( Vertex v)
 	{
-		vlist.addElement(v);	
+		vlist.add(v);	
 	}
 
 	public void addEdge( Edge e, int v1, int v2)
 	{
 		try {
-			elist.addElement(e);
-			Vertex vrtx1 = (Vertex)vlist.elementAt(v1);
-			Vertex vrtx2 = (Vertex)vlist.elementAt(v2);
+			elist.add(e);
+			Vertex vrtx1 = (Vertex)vlist.get(v1);
+			Vertex vrtx2 = (Vertex)vlist.get(v2);
 			e.v1 = vrtx1;
 			e.v2 = vrtx2;
-			vrtx1.elist.addElement(e);
-			vrtx2.elist.addElement(e);
+			vrtx1.elist.add(e);
+			vrtx2.elist.add(e);
 
 		} catch (Exception ex) {
 			System.err.println("addEdge: oops. v1: " + v1 + "  v2: " + v2);
@@ -105,14 +111,14 @@ class Obj extends Object
 	{
 		try {
 
-			tlist.addElement( t);
+			tlist.add( t);
 
-			Vertex vrtx1 = (Vertex)vlist.elementAt(v1);
-			Vertex vrtx2 = (Vertex)vlist.elementAt(v2);
-			Vertex vrtx3 = (Vertex)vlist.elementAt(v3);
-			Edge   edge1 = (Edge)  elist.elementAt(e1);
-			Edge   edge2 = (Edge)  elist.elementAt(e2);
-			Edge   edge3 = (Edge)  elist.elementAt(e3);
+			Vertex vrtx1 = (Vertex)vlist.get(v1);
+			Vertex vrtx2 = (Vertex)vlist.get(v2);
+			Vertex vrtx3 = (Vertex)vlist.get(v3);
+			Edge   edge1 = (Edge)  elist.get(e1);
+			Edge   edge2 = (Edge)  elist.get(e2);
+			Edge   edge3 = (Edge)  elist.get(e3);
 			
 			t.v1 = vrtx1;
 			t.v2 = vrtx2;
@@ -121,9 +127,9 @@ class Obj extends Object
 			t.e2 = edge2;
 			t.e3 = edge3;
 
-			vrtx1.tlist.addElement(t);
-			vrtx2.tlist.addElement(t);
-			vrtx3.tlist.addElement(t);
+			vrtx1.tlist.add(t);
+			vrtx2.tlist.add(t);
+			vrtx3.tlist.add(t);
 			if (edge1.t1 == null) {
 				edge1.t1 = t;
 			} else {
@@ -170,19 +176,19 @@ class Obj extends Object
 	public void addTriangleNoEdge( Triangle t, int v1, int v2, int v3)
     {
 		try {
-			tlist.addElement( t);
+			tlist.add( t);
 			
-			Vertex vrtx1 = (Vertex)vlist.elementAt(v1);
-			Vertex vrtx2 = (Vertex)vlist.elementAt(v2);
-			Vertex vrtx3 = (Vertex)vlist.elementAt(v3);
+			Vertex vrtx1 = (Vertex)vlist.get(v1);
+			Vertex vrtx2 = (Vertex)vlist.get(v2);
+			Vertex vrtx3 = (Vertex)vlist.get(v3);
 			
 			t.v1 = vrtx1;
 			t.v2 = vrtx2;
 			t.v3 = vrtx3;
 			
-			vrtx1.tlist.addElement(t);
-			vrtx2.tlist.addElement(t);
-			vrtx3.tlist.addElement(t);
+			vrtx1.tlist.add(t);
+			vrtx2.tlist.add(t);
+			vrtx3.tlist.add(t);
 			
 			// Calculate normal.
 			Vec3f one    = MemMgr.Vec3f();
@@ -220,10 +226,10 @@ class Obj extends Object
 
 		for (int i=0; i<vlist.size(); i++) {
 
-			vert = (Vertex)vlist.elementAt(i);
+			vert = (Vertex)vlist.get(i);
 			vert_n = MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0);
 			for (int j=0; j<vert.tlist.size(); j++) {
-				tri = (Triangle)vert.tlist.elementAt(j);
+				tri = (Triangle)vert.tlist.get(j);
 				vert_n.x += tri.n.x;
 				vert_n.y += tri.n.y;
 				vert_n.z += tri.n.z;
@@ -300,7 +306,7 @@ class Obj extends Object
 		// Also: it is assumed that vertices are listed in clockwise order, for
 		// deteriming surface normal direction.
 		
-		Vector face_indx = new Vector(10);
+		ArrayList<Integer> face_indx = new ArrayList<Integer>(10);
 		int cur_indx = 0;
 		
 		while (cur_indx < indices.length) {
@@ -309,7 +315,7 @@ class Obj extends Object
 			// including the "-1" separator, which is discarded)
 
 			while (indices[cur_indx] != -1) {
-			face_indx.addElement( new Integer( indices[cur_indx]) );
+			face_indx.add( Integer.valueOf(indices[cur_indx]) );
 			cur_indx++;
 			}
 
@@ -320,11 +326,11 @@ class Obj extends Object
 			addFace( face_indx, ccw);
 
 			// Clear out face list for next group of indices, and repeat.
-			face_indx.removeAllElements();
+			face_indx.clear();
 		}
     }
 
-    protected void addFace( Vector face_indx, boolean ccw)
+    protected void addFace( ArrayList<Integer> face_indx, boolean ccw)
     {
 		// If face has more than three vertices, break it into
 		// a fan of triangles.  Fan will have its shared base
@@ -338,7 +344,7 @@ class Obj extends Object
 		}
 
 		// Get base vertex for fan of triangles.
-		int base_indx = ((Integer)face_indx.elementAt(0)).intValue();
+		int base_indx = ((Integer)face_indx.get(0)).intValue();
 		int indx1 = 0;
 		int indx2 = 0;
 		if (base_indx >= this.vlist.size() || base_indx < 0) {
@@ -351,8 +357,8 @@ class Obj extends Object
 		for (int i=1; i<face_indx.size()-1; i++) {
 
 			// Get next two indices from list
-			indx1 = ((Integer)face_indx.elementAt(i)).intValue();
-			indx2 = ((Integer)face_indx.elementAt(i+1)).intValue();
+			indx1 = ((Integer)face_indx.get(i)).intValue();
+			indx2 = ((Integer)face_indx.get(i+1)).intValue();
 
 			// Make sure indices are in range
 			if (indx1 >= this.vlist.size() || indx1 < 0 ) {
@@ -418,7 +424,7 @@ class Obj extends Object
 		// the vertices listed.  Sets of indices belonging to a single
 		// polyline are separated by the index "-1".
 		
-		Vector line_indx = new Vector(10);
+		ArrayList<Integer> line_indx = new ArrayList<Integer>(10);
 		int cur_indx = 0;
 		
 		while (cur_indx < indices.length) {
@@ -427,7 +433,7 @@ class Obj extends Object
 			// including the "-1" separator, which is discarded)
 
 			while (indices[cur_indx] != -1) {
-			line_indx.addElement( new Integer( indices[cur_indx]) );
+			line_indx.add( Integer.valueOf(indices[cur_indx]) );
 			cur_indx++;
 			}
 
@@ -438,11 +444,11 @@ class Obj extends Object
 			addPolyline( line_indx);
 
 			// Clear out line list for next group of indices, and repeat.
-			line_indx.removeAllElements();
+			line_indx.clear();
 		}
     }
 
-    protected void addPolyline( Vector line_indx)
+    protected void addPolyline( ArrayList<Integer> line_indx)
     {
 		// Polyline must have minimum two vertices.  If less, polyline is invalid; return.
 		if (line_indx.size() < 2) {
@@ -457,8 +463,8 @@ class Obj extends Object
 		for (int i=0; i<line_indx.size()-1; i++) {
 
 			// Get next two indices from list
-			indx1 = ((Integer)line_indx.elementAt(i)).intValue();
-			indx2 = ((Integer)line_indx.elementAt(i+1)).intValue();
+			indx1 = ((Integer)line_indx.get(i)).intValue();
+			indx2 = ((Integer)line_indx.get(i+1)).intValue();
 
 			// Make sure indices are in range
 			if (indx1 >= this.vlist.size() || indx1 < 0 ) {

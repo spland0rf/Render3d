@@ -1,40 +1,43 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
+
+import com.splandorf.render3d.math.*;
+
 
 public class Span extends Object
 {
-   Triangle t;
+   public Triangle t;
     
-    int xl;
-    int xr;
-    int yl;
-    int yr;
-    int zl;
-    int zr;
+    public int xl;
+    public int xr;
+    public int yl;
+    public int yr;
+    public int zl;
+    public int zr;
     
-    int rl;
-    int rr;
-    int gl;
-    int gr;
-    int bl;
-    int br;
+    public int rl;
+    public int rr;
+    public int gl;
+    public int gr;
+    public int bl;
+    public int br;
     
-    int cl;
-    int cr;
+    public int cl;
+    public int cr;
     
-    Vec3f nl;
-    Vec3f nr;
-    VecSf nsl;
-    VecSf nsr;
+    public Vec3f nl;
+    public Vec3f nr;
+    public VecSf nsl;
+    public VecSf nsr;
     
-    int sl;
-    int sr;
-    int tl;
-    int tr;
-    int ul;
-    int ur;
-    int vl;
-    int vr;
+    public int sl;
+    public int sr;
+    public int tl;
+    public int tr;
+    public int ul;
+    public int ur;
+    public int vl;
+    public int vr;
     
-    Span next;
+    public Span next;
 }
 

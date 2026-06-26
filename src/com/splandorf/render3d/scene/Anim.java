@@ -1,11 +1,9 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-import com.splandorf.render3d.Ctm;
-import com.splandorf.render3d.Node;
-import com.splandorf.render3d.Group;
-import com.splandorf.render3d.Render;
+import com.splandorf.render3d.*;
+import com.splandorf.render3d.math.*;
 
-class Anim extends Group
+public class Anim extends Group
 {
     int style;
 
@@ -79,8 +77,9 @@ class Anim extends Group
         this.cycle      = cycle;
         this.xform      = xform;
 
-        if (raw_rate == null) raw_rate = MemMgr.Vec3f();
-
+        if (raw_rate == null) {
+            raw_rate = MemMgr.Vec3f();
+        }
         // We can treat ONE_SHOTs as LOOPs that just loop once, between
         // start_time and end_time.  [This is accomplished by setting
         // "cycle" to be equal to "duration", so the animation runs
@@ -99,12 +98,12 @@ class Anim extends Group
 
     public void startAnim()
     {
-	running = true;
+	    running = true;
     }
 
     public void stopAnim()
     {
-	running = false;
+	    running = false;
     }
     
     /**
@@ -119,47 +118,51 @@ class Anim extends Group
      */
     public void updateAnim(float cur_time)
     {
-	if (running == false) return;
+        if (running == false) {
+            return;
+        }
 
-	float elapsed_time = cur_time - last_time;
-	float ratio        = (float)0.0;
-	
-	if (style==NONE) {
-	    return;
+        float elapsed_time = cur_time - last_time;
+        float ratio        = (float)0.0;
+        
+        if (style==NONE) {
+            return;
 
-	} else if (style==LOOP) {
-	    ratio = ( (cur_time - start_time) % cycle ) / cycle;
-	    setAnim( ratio);
+        } else if (style==LOOP) {
+            ratio = ( elapsed_time % cycle ) / cycle;
+            setAnim( ratio);
 
-	} else if (style==PING_PONG) {
-	    ratio = ( (cur_time - start_time) % ((float)2.0 * cycle) ) / cycle;
-	    if (ratio >= (float)0.0 && ratio < (float)1.0) {
-		setAnim( ratio);
+        } else if (style==PING_PONG) {
+            ratio = ( elapsed_time % ((float)2.0 * cycle) ) / cycle;
+            if (ratio >= (float)0.0 && ratio < (float)1.0) {
+                setAnim( ratio);
+            } 
+            else if (ratio >= (float)1.0 && ratio <= (float)2.0) {
+                ratio = (float)2.0 - ratio;
+                setAnim( ratio);
+            }
 
-	    } else if (ratio >= (float)1.0 && ratio <= (float)2.0) {
-		ratio = (float)2.0 - ratio;
-		setAnim( ratio);
-	    }
+        } else if (style==JUMP) {
+            if (last_time < end_time && cur_time >= end_time) {
+                setAnim( (float)1.0 );
+            }
 
-	} else if (style==JUMP) {
-	    if (last_time < end_time && cur_time >= end_time) {
-		setAnim( (float)1.0 );
-	    }
+        } else if (style==CONTINUOUS) {
+            ratio = (cur_time - start_time) / cycle;
+            setAnim( ratio);
+        }
 
-	} else if (style==CONTINUOUS) {
-	    ratio = (cur_time - start_time) / cycle;
-	    setAnim( ratio);
-	}
+        last_time = cur_time;
 
-	last_time = cur_time;
+        // Make sure CONTINUOUS animation loops never time out.
+        // [Always set last_time to zero before comparing to end_time.]
+        if (style==CONTINUOUS) {
+            last_time = (float)0.0;
+        }
 
-	// Make sure CONTINUOUS animation loops never time out.
-	// [Always set last_time to zero before comparing to end_time.]
-	if (style==CONTINUOUS) {
-	    last_time = (float)0.0;
-	}
-
-	if (last_time > end_time) running = false;
+        if (last_time > end_time) {
+            running = false;
+        }
     }
     
     /**

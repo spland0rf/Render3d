@@ -1,8 +1,10 @@
 package com.splandorf.render3d.shader;
 
+import com.splandorf.render3d.scene.*;
+
 public class TranspTriangle extends Shader {
 
-    public void drawTranspTriangle( Triangle t, rMaterial mat)
+    public static void drawTranspTriangle( Triangle t, Material mat)
     {
 		// Order vertices {v1,v2,v3} by increasing Y
 		Vertex v1 = t.v1;
@@ -83,7 +85,7 @@ public class TranspTriangle extends Shader {
 		}
     }
     
-    public void drawTranspSpan( int y, int lx, int rx, int lz, int rz, rMaterial mat)
+    public static void drawTranspSpan( int y, int lx, int rx, int lz, int rz, Material mat)
     {
 		// Make sure we're drawing left->right.
 		// (Scan conversion algorithm can send

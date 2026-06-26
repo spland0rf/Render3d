@@ -8,86 +8,77 @@
 // (c) zbigniew mufosowicz -- 1899
 //================================================================
 
-import Vec3f;
-import Vec3i;
-import VecSf;
-import VecSi;
-import Mat4f;
+package com.splandorf.render3d;
 
-import Span;
-import Triangle;
-import Obj;
-import Vertex;
-import Material;
-import Light;
-import Edge;
+import com.splandorf.render3d.math.*;
+import com.splandorf.render3d.scene.*;
 
 public class MemMgr extends Object
 {
-	static int n_Vec3f;
-	static int n_Vec3i;
-	static int n_VecSf;
-	static int n_VecSi;
-	static int n_Mat4f;
-	static int n_Vertex;
-	static int n_Span;
-	static int n_Triangle;
-	static int n_Obj;
-	static int n_Material;
-	static int n_Light;
-	static int n_Edge;
+	static protected int n_Vec3f;
+	static protected int n_Vec3i;
+	static protected int n_VecSf;
+	static protected int n_VecSi;
+	static protected int n_Mat4f;
+	static protected int n_Vertex;
+	static protected int n_Span;
+	static protected int n_Triangle;
+	static protected int n_Obj;
+	static protected int n_Material;
+	static protected int n_Light;
+	static protected int n_Edge;
 
-	static int BATCHSIZE_Vec3f    = 2048;
-	static int BATCHSIZE_Vec3i    = 512;
-	static int BATCHSIZE_VecSf    = 512;
-	static int BATCHSIZE_VecSi    = 128;
-	static int BATCHSIZE_Mat4f    = 256;
-	static int BATCHSIZE_Vertex   = 2048;
-	static int BATCHSIZE_Span     = 2048;
-	static int BATCHSIZE_Triangle = 1024;
-	static int BATCHSIZE_Obj      = 16;
-	static int BATCHSIZE_Material = 8;
-	static int BATCHSIZE_Light    = 8;
-	static int BATCHSIZE_Edge	  = 1024;
+	static protected int BATCHSIZE_Vec3f    = 2048;
+	static protected int BATCHSIZE_Vec3i    = 512;
+	static protected int BATCHSIZE_VecSf    = 512;
+	static protected int BATCHSIZE_VecSi    = 128;
+	static protected int BATCHSIZE_Mat4f    = 256;
+	static protected int BATCHSIZE_Vertex   = 2048;
+	static protected int BATCHSIZE_Span     = 2048;
+	static protected int BATCHSIZE_Triangle = 1024;
+	static protected int BATCHSIZE_Obj      = 16;
+	static protected int BATCHSIZE_Material = 8;
+	static protected int BATCHSIZE_Light    = 8;
+	static protected int BATCHSIZE_Edge	  = 1024;
 
-	static Vec3f    LIST_Vec3f;
-	static Vec3i    LIST_Vec3i;
-	static VecSf    LIST_VecSf;
-	static VecSi    LIST_VecSi;
-	static Mat4f    LIST_Mat4f;
-	static Vertex   LIST_Vertex;
-	static Span     LIST_Span;
-	static Triangle LIST_Triangle;
-	static Obj      LIST_Obj;
-	static Material LIST_Material;
-	static Light    LIST_Light;
-	static Edge		LIST_Edge;
+	static protected Vec3f    LIST_Vec3f;
+	static protected Vec3i    LIST_Vec3i;
+	static protected VecSf    LIST_VecSf;
+	static protected VecSi    LIST_VecSi;
+	static protected Mat4f    LIST_Mat4f;
+	static protected Vertex   LIST_Vertex;
+	static protected Span     LIST_Span;
+	static protected Triangle LIST_Triangle;
+	static protected Obj      LIST_Obj;
+	static protected Material LIST_Material;
+	static protected Light    LIST_Light;
+	static protected Edge		LIST_Edge;
 
-	static Vec3f    temp_Vec3f;
-	static Vec3i    temp_Vec3i;
-	static VecSf    temp_VecSf;
-	static VecSi    temp_VecSi;
-	static Mat4f    temp_Mat4f;
-	static Vertex   temp_Vertex;
-	static Span     temp_Span;
-	static Triangle temp_Triangle;
-	static Obj      temp_Obj;
-	static Light    temp_Light;
-	static Material temp_Material;
-	static Edge		temp_Edge;
+	static protected Vec3f    temp_Vec3f;
+	static protected Vec3i    temp_Vec3i;
+	static protected VecSf    temp_VecSf;
+	static protected VecSi    temp_VecSi;
+	static protected Mat4f    temp_Mat4f;
+	static protected Vertex   temp_Vertex;
+	static protected Span     temp_Span;
+	static protected Triangle temp_Triangle;
+	static protected Obj      temp_Obj;
+	static protected Light    temp_Light;
+	static protected Material temp_Material;
+	static protected Edge		temp_Edge;
 	
-	static Vec3f    temp2_Vec3f;
-	static Vec3i    temp2_Vec3i;
-	static VecSf    temp2_VecSf;
-	static VecSi    temp2_VecSi;
-	static Mat4f    temp2_Mat4f;
-	static Vertex   temp2_Vertex;
-	static Span     temp2_Span;
-	static Triangle temp2_Triangle;
-	static Obj      temp2_Obj;
-	static Light    temp2_Light;
-	static Material temp2_Material;
-	static Edge		temp2_Edge;
+	static protected Vec3f    temp2_Vec3f;
+	static protected Vec3i    temp2_Vec3i;
+	static protected VecSf    temp2_VecSf;
+	static protected VecSi    temp2_VecSi;
+	static protected Mat4f    temp2_Mat4f;
+	static protected Vertex   temp2_Vertex;
+	static protected Span     temp2_Span;
+	static protected Triangle temp2_Triangle;
+	static protected Obj      temp2_Obj;
+	static protected Light    temp2_Light;
+	static protected Material temp2_Material;
+	static protected Edge		temp2_Edge;
 
 	public MemMgr()
 	{
@@ -531,7 +522,7 @@ public class MemMgr extends Object
 
 	static public Vec3f Vec3f( float a, float b, float c)
 	{
-		temp_Vec3f = get_Vec3f();
+		temp_Vec3f = Vec3f();
 		temp_Vec3f.x = a;
 		temp_Vec3f.y = b;
 		temp_Vec3f.z = c;

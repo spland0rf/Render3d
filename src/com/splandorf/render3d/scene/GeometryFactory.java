@@ -1,4 +1,7 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
+
+import com.splandorf.render3d.math.*;
+import com.splandorf.render3d.MemMgr;
 
 public class GeometryFactory
 {
@@ -41,7 +44,7 @@ public class GeometryFactory
 		return makeClosedRevolve( lat_res, y, r, s_start, s_end, t_start, t_end);
 	}
 
-	protected static Obj makeRandomPointfield( int n_points, float radius)
+	public static Obj makeRandomPointfield( int n_points, float radius)
     {
 		float x, y, z;
 		Obj pointfield = MemMgr.Obj();
@@ -54,7 +57,7 @@ public class GeometryFactory
 		return pointfield;
     }
 
-	    public static int[][] makeGaussianDotArrays( int resolution, int step_size)
+	public static int[][] makeGaussianDotArrays( int resolution, int step_size)
     {
 		int [][] dot_array = new int[step_size][resolution*resolution];
 		double radius, distance, intensity, distX, distY;
@@ -109,19 +112,18 @@ public class GeometryFactory
 			
 			for (int i=0; i<resolution; i++) {
 
-			wu_00 = ((resolution-i) * (resolution-j))*4;
-			wu_01 = ((resolution-i) * j) * 4;
-			wu_10 = (i * (resolution-j)) * 4;
-			wu_11 = (i * j) * 4;
-			if (wu_00 == 256) wu_00 = 255;
-			if (wu_01 == 256) wu_01 = 255;
-			if (wu_10 == 256) wu_10 = 255;
-			if (wu_11 == 256) wu_11 = 255;
+				wu_00 = ((resolution-i) * (resolution-j))*4;
+				wu_01 = ((resolution-i) * j) * 4;
+				wu_10 = (i * (resolution-j)) * 4;
+				wu_11 = (i * j) * 4;
+				if (wu_00 == 256) wu_00 = 255;
+				if (wu_01 == 256) wu_01 = 255;
+				if (wu_10 == 256) wu_10 = 255;
+				if (wu_11 == 256) wu_11 = 255;
+				
+				//		System.out.println("wu_00: " + wu_00 + "  wu_01: " + wu_01 + "  wu_10: " + wu_10 + "  wu_11: " + wu_11 + "  sum: " + (wu_00 + wu_01 + wu_10 + wu_11));
 
-			
-			//		System.out.println("wu_00: " + wu_00 + "  wu_01: " + wu_01 + "  wu_10: " + wu_10 + "  wu_11: " + wu_11 + "  sum: " + (wu_00 + wu_01 + wu_10 + wu_11));
-
-			wu_array[ j*resolution + i] = (wu_00<<24) + (wu_01<<16) + (wu_10<<8) + (wu_11) ;
+				wu_array[ j*resolution + i] = (wu_00<<24) + (wu_01<<16) + (wu_10<<8) + (wu_11) ;
 
 			}
 
@@ -916,7 +918,7 @@ public class GeometryFactory
 		Triangle t10 = MemMgr.Triangle();
 		Triangle t11 = MemMgr.Triangle();
 		
-		//------------------------------------------------------- 
+		/** 
 		// Hard-coding some materials to test different rendering
 		//  modes.  In a normal usage these should NOT be set here
 
@@ -972,10 +974,11 @@ public class GeometryFactory
 		texture._fog_far  = (float)4.5;
 		texture._fog_near_val = (float)0.0;
 		texture._fog_far_val  = (float)1.0;
-		texture._texture = render.loadTexture("scarymetal.gif"); 
+		texture._texture = Render.loadTexture("scarymetal.gif"); 
 		texture.SPEED = Material.FAST16;
 		t04.mat = texture;
 		t05.mat = texture;
+		*/
 
 		obj.addTriangle( t00,  0, 3, 1,  0, 3, 12 );
 		obj.addTriangle( t01,  1, 3, 2,  1, 12, 2 );
@@ -988,11 +991,10 @@ public class GeometryFactory
 		obj.addTriangle( t08,  4, 0, 1,  8, 0, 16 );
 		obj.addTriangle( t09,  4, 1, 5,  16, 9, 4 );
 		obj.addTriangle( t10,  7, 2, 3,  11, 17, 2);
-		obj.addTriangle( t11,  7, 6, 
-		
+		obj.addTriangle( t11,  7, 6, 2,  17, 6, 10);
 		obj.calcVertexNormals();
 
-		return Obj;
+		return obj;
 	}
 
 	public static Obj makeOpenBox()

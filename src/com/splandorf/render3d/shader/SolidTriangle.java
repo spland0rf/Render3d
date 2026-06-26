@@ -1,24 +1,10 @@
 package com.splandorf.render3d.shader;
 
-public static class SolidTriangle extends Shader
+import com.splandorf.render3d.scene.*;
+import com.splandorf.render3d.Render;
+
+public class SolidTriangle extends Shader
 {
-
-/** 
-					} else if (mat._lightmodel == Material.SOLID) {
-
-						if (mat.TEXTURE == true) {
-							if (mat.SPEED >= Material.FAST) {
-								fastSolidTextureTriangle( t, mat);
-							} else {
-								solidTextureTriangle( t, mat);	
-							}
-						} else {
-							solidTriangle( t, mat._color, mat);
-						}
-					}
-*/
-//===================================
-
 
 	public static void drawSolidTriangle( Triangle t, int color, Material mat)
 	{
@@ -288,7 +274,7 @@ public static class SolidTriangle extends Shader
 	}
 
 	// Slow!  Texture-corrects every pixel!
-	public void drawSolidTextureSpan( int y, int lx, int rx, float lz, float rz, 
+	public static void drawSolidTextureSpan( int y, int lx, int rx, float lz, float rz, 
 									float ls, float rs, float lt, float rt, Material mat)
 	{
 		// Make sure we're drawing left->right.
@@ -367,7 +353,7 @@ public static class SolidTriangle extends Shader
 	}
 
 		// Slow!  Texture-corrects every pixel!
-	public void drawFast16solidTextureSpan( int y, int lx, int rx, float lz, float rz, 
+	public static void drawFast16solidTextureSpan( int y, int lx, int rx, float lz, float rz, 
 									float ls, float rs, float lt, float rt, Material mat)
 	{
 		// Make sure we're drawing left->right.
@@ -416,8 +402,8 @@ public static class SolidTriangle extends Shader
 		// Render that puppy
 		int pixel = lx + y * _width;
 
-		int subdivs   = (rx-lx) / SUBDIV_SIZE;
-		int remainder = (rx-lx) % SUBDIV_SIZE;
+		int subdivs   = (rx-lx) / Render.SUBDIV_SIZE;
+		int remainder = (rx-lx) % Render.SUBDIV_SIZE;
 
 		float ZCONV = (float)(Integer.MAX_VALUE) / (float)1000.0;
 		float rzf = z;
@@ -442,9 +428,9 @@ public static class SolidTriangle extends Shader
 		// As many SUBDIV-sized pixel chunks as fit into the span.
 		for (int k=0; k<subdivs; k++) {
 						
-			rzf += dz * (float)SUBDIV_SIZE;
-			rsf += ds * (float)SUBDIV_SIZE;
-			rtf += dt * (float)SUBDIV_SIZE;
+			rzf += dz * (float)Render.SUBDIV_SIZE;
+			rsf += ds * (float)Render.SUBDIV_SIZE;
+			rtf += dt * (float)Render.SUBDIV_SIZE;
 			zi  =  rzi;
 			si  =  rsi;
 			ti  =  rti;
@@ -457,11 +443,11 @@ public static class SolidTriangle extends Shader
 				rsi = 0;
 				rti = 0;
 			}
-			dzi = (rzi - zi) / SUBDIV_SIZE;
-			dsi = (rsi - si) / SUBDIV_SIZE;
-			dti = (rti - ti) / SUBDIV_SIZE;
+			dzi = (rzi - zi) / Render.SUBDIV_SIZE;
+			dsi = (rsi - si) / Render.SUBDIV_SIZE;
+			dti = (rti - ti) / Render.SUBDIV_SIZE;
 
-			for (int i=0; i<SUBDIV_SIZE; i++) {
+			for (int i=0; i<Render.SUBDIV_SIZE; i++) {
 
 				if ( zi < _zbuf[ pixel ] ) {
 					texel = mat._texture[ (si>>9)%128 + ((ti>>9)%128)*128 ];
@@ -537,7 +523,7 @@ public static class SolidTriangle extends Shader
 
 
 	// Fast! Incorrect z interpolation!
-	public void drawFastSolidTextureTriangle( Triangle t, Material mat)
+	public static void drawFastSolidTextureTriangle( Triangle t, Material mat)
 	{
 		// Order vertices {v1,v2,v3} by increasing Y
 		Vertex v1 = t.v1;
@@ -646,8 +632,9 @@ public static class SolidTriangle extends Shader
 	}
 
 	// Slow!  Texture-corrects every pixel!
-	public void drawFastTextureSpan( int y, int lx, int rx, int lz, int rz, 
-									int ls, int rs, int lt, int rt, Material mat)
+	public static void drawFastTextureSpan( 
+		int y, int lx, int rx, int lz, int rz, 
+		int ls, int rs, int lt, int rt, Material mat)
 	{
 		// Make sure we're drawing left->right.
 		// (Scan conversion algorithm can send 

@@ -1,14 +1,17 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-public class Light extends Object
+import com.splandorf.render3d.math.Vec3f;
+import com.splandorf.render3d.math.VecSf;
+
+public class Light
 {
-    Vec3f dir;
-    Vec3f s_dir;
-    float red;
-    float green;
-    float blue;
-    float intensity;
+    public Vec3f dir;
+    public VecSf s_dir;
+    public float red;
+    public float green;
+    public float blue;
+    public float intensity;
     
-    Light next;
+    public Light next;
 }
 

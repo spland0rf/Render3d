@@ -1,13 +1,13 @@
-package com.splandorf.render3d;
+package com.splandorf.render3d.scene;
 
-class Edge 
+public class Edge 
 {
-	Vertex v1 = null;
-	Vertex v2 = null;
+	public Vertex v1 = null;
+	public Vertex v2 = null;
 
-	Triangle t1 = null;
-	Triangle t2 = null;
+	public Triangle t1 = null;
+	public Triangle t2 = null;
 
-	Edge next = null;
+	public Edge next = null;
 }
 

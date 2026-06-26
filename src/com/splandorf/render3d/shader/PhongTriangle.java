@@ -1,30 +1,10 @@
 package com.splandorf.render3d.shader;
 
+import com.splandorf.render3d.scene.*;
+
 public class PhongTriangle extends Shader
 {
-
-/**
-				if (mat._lightmodel == Material.PHONG) {
-
-							// Get light contribution at vertex 1
-							color = mat._color;
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, t.v1.w_n);
-							Alg.normalize( t.v1.w_n);
-							// Get light contribution at vertex 2
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, t.v2.w_n);
-							Alg.normalize( t.v2.w_n);
-							// Get light contribution at vertex 3
-							Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, t.v3.w_n);
-							Alg.normalize( t.v3.w_n);
-						
-							phongTriangle( t, mat);
-*/
-
-
-//=======
-
-	
-	public static void phongTriangle( Triangle t, Material mat)
+	public static void drawPhongTriangle( Triangle t, Material mat)
 	{
 		// Order vertices {v1,v2,v3} by increasing Y
 		Vertex v1 = t.v1;
@@ -96,7 +76,7 @@ public class PhongTriangle extends Shader
 
 			for (int i=v1.y; i<v2.y; i++) {
 				if (i>0 && i<_height) {
-					phongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
+					drawPhongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
 				}
 				lx += dx_1_3;
 				rx += dx_1_2;
@@ -123,7 +103,7 @@ public class PhongTriangle extends Shader
 
 			for (int i=v2.y; i<v3.y; i++) {
 				if (i>0 && i<_height) {
-					phongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
+					drawPhongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
 				}
 				lx += dx_1_3;
 				rx += dx_2_3;
@@ -137,7 +117,7 @@ public class PhongTriangle extends Shader
 		}
 	}
 
-	public static void phongSpan( int y, int lx, int rx, int lz, int rz, 
+	public static void drawPhongSpan( int y, int lx, int rx, int lz, int rz, 
 		int la, int ra, int lb, int rb, int color, Material mat)
 	{
 		// Make sure we're drawing left->right.
@@ -150,7 +130,7 @@ public class PhongTriangle extends Shader
 			temp = la;  la = ra;  ra = temp;
 			temp = lb;  lb = rb;  rb = temp;
 		}
-
+/* 
 		int t_r = 0;
 		int t_g = 0;
 		int t_b = 0;
@@ -161,7 +141,7 @@ public class PhongTriangle extends Shader
 			t_g = (((color>>8 )&255)*(255-mat._transp_G))>>8;
 			t_b = (( color     &255)*(255-mat._transp_B))>>8;
 		}
-
+*/
 		int z = lz;
 		int a = la;
 		int b = lb;
@@ -182,7 +162,7 @@ public class PhongTriangle extends Shader
 			b += -lx * db;
 			lx = 0;
 		}
-		int s, t;
+		//int s, t;
 		// Render that puppy
 		int pixel = lx + y * _width;
 		for (int i=lx; i<rx; i++) {
@@ -209,7 +189,7 @@ public class PhongTriangle extends Shader
 					// "Fake" Phong lighting by using a pre-computed environment map!
 					// Need to do some archaeology on where that environment map comes from:
 					// loaded from a file, or precomputed based on light positions in the scene?
-					_pix [ pixel ] = _env_map[ (a>>9)%128 + ((127-(b>>9))%128)*128 ]; //(255<<24) + (red<<16) + (green<<8) + blue;
+					_pix [ pixel ] = mat._env_map[ (a>>9)%128 + ((127-(b>>9))%128)*128 ]; //(255<<24) + (red<<16) + (green<<8) + blue;
 					_zbuf[ pixel ] = z;
 //					}
 				}
