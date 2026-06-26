@@ -3,8 +3,9 @@ package com.splandorf.render3d;
 import com.splandorf.render3d.Ctm;
 import com.splandorf.render3d.Node;
 import com.splandorf.render3d.Group;
+import com.splandorf.render3d.Render;
 
-class Anim extends rGroup
+class Anim extends Group
 {
     int style;
 
@@ -33,16 +34,16 @@ class Anim extends rGroup
     final static public int ROT   = 2;
     final static public int SCALE = 3;
 
-    public Anim( String new_name, render rend)
+    public Anim( String new_name)
     {
-	    super( new_name, rend);
+	    super( new_name);
     }
 
-    public void render( Mat4f xform, Mat4f nxform, float time)
+    public void render( Render rend, Mat4f xform, Mat4f nxform, float time)
     {
         updateAnim( time);
 
-        super.render( xform, nxform, time);
+        super.render( rend, xform, nxform, time);
     }
 
     /**

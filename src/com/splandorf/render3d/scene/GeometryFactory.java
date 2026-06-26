@@ -2,7 +2,7 @@ package com.splandorf.render3d;
 
 public class GeometryFactory
 {
-	public static void makeSphere( int long_res, int lat_res, float s_start, float s_end,
+	public static Obj makeSphere( int long_res, int lat_res, float s_start, float s_end,
 		float t_start, float t_end)
 	{
 		int n_pts = long_res+2;
@@ -18,11 +18,11 @@ public class GeometryFactory
 			longi += long_step;
 		}
 
-		makeOpenRevolve( lat_res, y, r, s_start, s_end, t_start, t_end);
+		return makeOpenRevolve( lat_res, y, r, s_start, s_end, t_start, t_end);
 
 	}
 
-	public void makeTorus( int long_res, int lat_res, float inner_rad, float outer_rad, float s_start, float s_end,
+	public static Obj makeTorus( int long_res, int lat_res, float inner_rad, float outer_rad, float s_start, float s_end,
 		float t_start, float t_end)
 	{
 		int n_pts = long_res;
@@ -38,16 +38,108 @@ public class GeometryFactory
 			longi += long_step;
 		}
 
-		makeClosedRevolve( lat_res, y, r, s_start, s_end, t_start, t_end);
-
+		return makeClosedRevolve( lat_res, y, r, s_start, s_end, t_start, t_end);
 	}
 
+	protected static Obj makeRandomPointfield( int n_points, float radius)
+    {
+		float x, y, z;
+		Obj pointfield = MemMgr.Obj();
+		for ( int i=0; i<n_points; i++) {
+			x = ((float)(Math.random()) * (float)2.0 * radius) - radius;
+			y = ((float)(Math.random()) * (float)2.0 * radius) - radius;
+			z = ((float)(Math.random()) * (float)2.0 * radius) - radius;
+			pointfield.addVertex( MemMgr.Vertex( x, y, z) );
+		}
+		return pointfield;
+    }
 
-	public staticvoid makeOpenRevolve(int res, float [] y, float [] r, float s_start, float s_end,
+	    public static int[][] makeGaussianDotArrays( int resolution, int step_size)
+    {
+		int [][] dot_array = new int[step_size][resolution*resolution];
+		double radius, distance, intensity, distX, distY;
+
+		for (int k=0; k<step_size; k++) {
+
+			radius = (double)(step_size-k) / (double)step_size;
+			
+			for (int j=0; j<resolution; j++) {
+			
+			for (int i=0; i<resolution; i++) {
+				
+				distX = ((double)i - (double)(resolution/2)) / (double)(resolution/2);
+				distY = ((double)j - (double)(resolution/2)) / (double)(resolution/2) ;
+				distance = Math.sqrt( distX*distX + distY*distY) * 0.6;
+				if (distance < radius) {
+				intensity = 1.0 - (distance/radius);
+				double inten2 = intensity*intensity;
+
+				//			intensity = (inten2*inten2*intensity) *2.0;
+				/*
+				if (intensity<0.05) {
+					intensity += intensity;
+				} else {
+					intensity += 0.05;
+				}
+				*/
+				
+				//			intensity *= intensity;
+				//			intensity *= intensity;
+				intensity = inten2 * inten2;
+				intensity *= 1.5;
+				
+				if (intensity > 1.0) intensity=1.0;
+				} else {
+				intensity = 0;
+				}
+				dot_array[k][j*resolution+i] = (int)(255.0  * intensity);
+			}
+			}
+		}
+		return dot_array;
+    }
+
+    public static int[] makeWuUnitPointArray( int resolution)
+    {
+		int [] wu_array = new int[ resolution * resolution];
+
+		int wu_00, wu_01, wu_10, wu_11;
+
+		for (int j=0; j<resolution; j++) {
+			
+			for (int i=0; i<resolution; i++) {
+
+			wu_00 = ((resolution-i) * (resolution-j))*4;
+			wu_01 = ((resolution-i) * j) * 4;
+			wu_10 = (i * (resolution-j)) * 4;
+			wu_11 = (i * j) * 4;
+			if (wu_00 == 256) wu_00 = 255;
+			if (wu_01 == 256) wu_01 = 255;
+			if (wu_10 == 256) wu_10 = 255;
+			if (wu_11 == 256) wu_11 = 255;
+
+			
+			//		System.out.println("wu_00: " + wu_00 + "  wu_01: " + wu_01 + "  wu_10: " + wu_10 + "  wu_11: " + wu_11 + "  sum: " + (wu_00 + wu_01 + wu_10 + wu_11));
+
+			wu_array[ j*resolution + i] = (wu_00<<24) + (wu_01<<16) + (wu_10<<8) + (wu_11) ;
+
+			}
+
+		}
+
+		return wu_array;
+    }
+    
+
+    
+
+
+	public static Obj makeOpenRevolve(int res, float [] y, float [] r, float s_start, float s_end,
 		float t_start, float t_end)
 	{
 		int lati = y.length-2;
 		int longi  = res;
+		Obj obj = MemMgr.Obj();
 
 		// North and South pole points
 		Vertex n_pole = MemMgr.Vertex();
@@ -69,13 +161,13 @@ public class GeometryFactory
 					y[j+1],
 					(float)(Math.cos( (double)i * longi_step)) * r[j+1]
 					);
-				addVertex( verts[i+longi*j] );
+				obj.addVertex( verts[i+longi*j] );
 			}
 		}
 
 		// Add north and south poles
-		addVertex( n_pole);
-		addVertex( s_pole);
+		obj.addVertex( n_pole);
+		obj.addVertex( s_pole);
 
 		// Grid of edges (vertical, horizontal, and diagonal)
 		// Note: v-edges have extra column, h-edges extra row
@@ -111,7 +203,7 @@ public class GeometryFactory
 		for (int j=0; j<lati-1; j++) {
 			for (int i=0; i<longi; i++) {
 				v_edges[i+longi*j] = MemMgr.Edge();
-				addEdge( 
+				obj.addEdge( 
 					v_edges[i+longi*j],
 					i + longi*j,
 					i + longi*(j+1)
@@ -122,7 +214,7 @@ public class GeometryFactory
 		for (int j=0; j<lati; j++) {
 			for (int i=0; i<longi-1; i++) {
 				h_edges[i+(longi-1)*j] = MemMgr.Edge();
-				addEdge( 
+				obj.addEdge( 
 					h_edges[i+(longi-1)*j],
 					i   + longi*j,
 					i+1 + longi*j
@@ -133,7 +225,7 @@ public class GeometryFactory
 		for (int j=0; j<lati-1; j++) {
 			for (int i=0; i<longi-1; i++) {
 				d_edges[i+(longi-1)*j] = MemMgr.Edge();
-				addEdge( 
+				obj.addEdge( 
 					d_edges[i+(longi-1)*j],
 					i   + longi*(j+1),
 					i+1 + longi*j
@@ -155,7 +247,7 @@ public class GeometryFactory
 			// Add horizontal edge zipping seam from right-most
 			// vertex back to left-most vertex
 			s_edges[2*k] = MemMgr.Edge();
-			addEdge( 
+			obj.addEdge( 
 				s_edges[2*k],
 				// Right-most vertex in grid
 				k*longi + longi-1,
@@ -165,7 +257,7 @@ public class GeometryFactory
 			// Add diagonal edge zipping seam from right-most
 			// vertex in grid to left-most one.
 			s_edges[2*k+1] = MemMgr.Edge();
-			addEdge(
+			obj.addEdge(
 				s_edges[ 2*k+1 ],
 				// Right vertex
 				k*longi,
@@ -175,7 +267,7 @@ public class GeometryFactory
 		}
 		// Add one more edge at bottom
 		s_edges[2*k] = MemMgr.Edge();
-		addEdge(
+		obj.addEdge(
 				s_edges[2*k],
 				// Right-most vertex in grid
 				k*longi + longi-1,
@@ -187,12 +279,12 @@ public class GeometryFactory
 		// North pole
 		for (int i=0; i<longi; i++) {
 			c1_edges[i] = MemMgr.Edge();
-			addEdge( c1_edges[i], i, N_POLE);
+			obj.addEdge( c1_edges[i], i, N_POLE);
 		}
 		// South pole
 		for (int i=0; i<longi; i++) {
 			c2_edges[i] = MemMgr.Edge();
-			addEdge( c2_edges[i], (lati-1)*longi + i, S_POLE);
+			obj.addEdge( c2_edges[i], (lati-1)*longi + i, S_POLE);
 		}
 				
 
@@ -213,7 +305,7 @@ public class GeometryFactory
 					(s_start + (s_end-s_start) * (float) i    / (float)longi),
 					(t_start + (t_end-t_start) * (float)(j+2) / (float)(lati+1) )
 					);
-				addTriangle( 
+				obj.addTriangle( 
 					tri,
 					i   +  j   *longi,
 					i+1 +  j   *longi,
@@ -231,7 +323,7 @@ public class GeometryFactory
 					(s_start + (s_end-s_start) * (float) i    / (float)longi),
 					(t_start + (t_end-t_start) * (float)(j+2) / (float)(lati+1) )
 					);
-				addTriangle( 
+				obj.addTriangle( 
 					tri,
 					i+1 +  j   *longi,
 					i+1 + (j+1)*longi,
@@ -254,7 +346,7 @@ public class GeometryFactory
 				(s_start + (s_end-s_start) * (float)(longi-1)  / (float)longi),
 				(t_start + (t_end-t_start) * (float)(j+2)      / (float)(lati+1) )
 				);
-			addTriangle( 
+			obj.addTriangle( 
 				tri,
 				j*longi + longi-1,
 				j*longi,
@@ -272,7 +364,7 @@ public class GeometryFactory
 				(s_start + (s_end-s_start) * (float)(longi-1) / (float)longi),
 				(t_start + (t_end-t_start) * (float)(j+2)     / (float)(lati+1) )
 				);
-			addTriangle( 
+			obj.addTriangle( 
 				tri,
 				j*longi,
 				(j+1)*longi,
@@ -296,7 +388,7 @@ public class GeometryFactory
 				(s_start + (s_end-s_start) * (float)(k+1) / (float)longi),
 				(t_start + (t_end-t_start) * (float) 1.0  / (float)(lati+1) )
 				);
-			addTriangle( 
+			obj.addTriangle( 
 				tri,
 				k  ,
 				N_POLE,
@@ -315,7 +407,7 @@ public class GeometryFactory
 			(s_end),
 			(t_start + (t_end-t_start) * (float) 1.0  / (float)(lati+1) )
 			);
-		addTriangle( 
+		obj.addTriangle( 
 			tri,
 			k  ,
 			N_POLE,
@@ -337,7 +429,7 @@ public class GeometryFactory
 				(s_start + (s_end-s_start) * (float) k      / (float)longi),
 				(t_start + (t_end-t_start) * (float)(lati)  / (float)(lati+1) )
 				);
-			addTriangle( 
+			obj.addTriangle( 
 				tri,
 				(lati-1) * longi + k+1,
 				S_POLE,
@@ -356,7 +448,7 @@ public class GeometryFactory
 			(s_start + (s_end-s_start) * (float) k      / (float)longi),
 			(t_start + (t_end-t_start) * (float)(lati)  / (float)(lati+1) )
 			);
-		addTriangle( 
+		obj.addTriangle( 
 			tri,
 			(lati-1) * longi,
 			S_POLE,
@@ -367,18 +459,20 @@ public class GeometryFactory
 			);
 
 
-		calcVertexNormals();
+		obj.calcVertexNormals();
+
+		return obj;
 	}
 
 
 	
-	public staticvoid makeClosedRevolve(int res, float [] y, float [] r, float s_start, float s_end,
+	public static Obj makeClosedRevolve(int res, float [] y, float [] r, float s_start, float s_end,
 		float t_start, float t_end)
 	{
 		int lati   = y.length;
 		int longi  = res;
-
 		double longi_step = Math.PI * 2.0  / (double)(longi);
+		Obj obj = MemMgr.Obj();
 
 		// Grid of vertices, [x,y] = [(longi+1),(lati+1)]
 		int [] verts = new int[ (longi+1) * (lati+1)];
@@ -392,7 +486,7 @@ public class GeometryFactory
 					(float)(Math.cos( (double)i * longi_step)) * r[j]
 					);
 				verts[i+(longi+1)*j] = i+longi*j;
-				addVertex( vert );
+				obj.addVertex( vert );
 			}
 		}
 		// Fill extra (bottom,right) row & column w/ copies 
@@ -440,7 +534,7 @@ public class GeometryFactory
 		for (int j=0; j<lati; j++) {
 			for (int i=0; i<longi; i++) {
 				edges[ V_EDGE + i+(longi+1)*j] = V_EDGE + i+longi*j;
-				addEdge( 
+				obj.addEdge( 
 					MemMgr.Edge(),
 					verts[ i + (longi+1)*j ],
 					verts[ i + (longi+1)*(j+1) ]
@@ -451,7 +545,7 @@ public class GeometryFactory
 		for (int j=0; j<lati; j++) {
 			for (int i=0; i<longi; i++) {
 				edges[ H_EDGE + i+(longi+1)*j] = H_EDGE + i+longi*j;
-				addEdge( 
+				obj.addEdge( 
 					MemMgr.Edge(),
 					verts[ i   + (longi+1)*j ],
 					verts[ i+1 + (longi+1)*j ]
@@ -462,7 +556,7 @@ public class GeometryFactory
 		for (int j=0; j<lati; j++) {
 			for (int i=0; i<longi; i++) {
 				edges[ D_EDGE + i+(longi+1)*j] = D_EDGE + i+longi*j;
-				addEdge( 
+				obj.addEdge( 
 					MemMgr.Edge(),
 					verts[ i   + (longi+1)*(j+1) ],
 					verts[ i+1 + (longi+1)*j     ]
@@ -502,7 +596,7 @@ public class GeometryFactory
 					(s_start + (s_end-s_start) * (float) i    / (float)longi),
 					(t_start + (t_end-t_start) * (float)(j+2) / (float)(lati+1) )
 					);
-				addTriangle( 
+				obj.addTriangle( 
 					tri,
 					verts[ i   +  j    * (longi+1) ],
 					verts[ i+1 +  j    * (longi+1) ],
@@ -520,7 +614,7 @@ public class GeometryFactory
 					(s_start + (s_end-s_start) * (float) i    / (float)longi),
 					(t_start + (t_end-t_start) * (float)(j+2) / (float)(lati+1) )
 					);
-				addTriangle( 
+				obj.addTriangle( 
 					tri,
 					verts[ i+1 +  j    * (longi+1) ],
 					verts[ i+1 + (j+1) * (longi+1) ],
@@ -532,13 +626,16 @@ public class GeometryFactory
 			}
 		}
 
-		calcVertexNormals();
+		obj.calcVertexNormals();
+
+		return obj;
 	}
 
 
-	public static void makeRing()
+	public static Obj makeRing()
 	{
 		int [] text = new int[128*128];
+		Obj obj = MemMgr.Obj();
 
 		for (int i=0; i<4; i++) {
 
@@ -588,14 +685,14 @@ public class GeometryFactory
 		Vertex v6 = MemMgr.Vertex( (float) 1.0, (float)-1.0, (float) 1.0);
 		Vertex v7 = MemMgr.Vertex( (float)-1.0, (float)-1.0, (float) 1.0);
 
-		addVertex( v0);
-		addVertex( v1);
-		addVertex( v2);
-		addVertex( v3);
-		addVertex( v4);
-		addVertex( v5);
-		addVertex( v6);
-		addVertex( v7);
+		obj.addVertex( v0);
+		obj.addVertex( v1);
+		obj.addVertex( v2);
+		obj.addVertex( v3);
+		obj.addVertex( v4);
+		obj.addVertex( v5);
+		obj.addVertex( v6);
+		obj.addVertex( v7);
 
 		Edge e00 = MemMgr.Edge();
 		Edge e01 = MemMgr.Edge();
@@ -614,22 +711,22 @@ public class GeometryFactory
 		Edge e14 = MemMgr.Edge();
 		Edge e15 = MemMgr.Edge();
 
-		addEdge( e00, 0, 1);
-		addEdge( e01, 1, 2);
-		addEdge( e02, 2, 3);
-		addEdge( e03, 3, 0);
-		addEdge( e04, 4, 5);
-		addEdge( e05, 5, 6);
-		addEdge( e06, 6, 7);
-		addEdge( e07, 7, 4);
-		addEdge( e08, 4, 0);
-		addEdge( e09, 5, 1);
-		addEdge( e10, 6, 2);
-		addEdge( e11, 7, 3);
-		addEdge( e12, 3, 1);
-		addEdge( e13, 6, 1);
-		addEdge( e14, 7, 5);
-		addEdge( e15, 7, 0);
+		obj.addEdge( e00, 0, 1);
+		obj.addEdge( e01, 1, 2);
+		obj.addEdge( e02, 2, 3);
+		obj.addEdge( e03, 3, 0);
+		obj.addEdge( e04, 4, 5);
+		obj.addEdge( e05, 5, 6);
+		obj.addEdge( e06, 6, 7);
+		obj.addEdge( e07, 7, 4);
+		obj.addEdge( e08, 4, 0);
+		obj.addEdge( e09, 5, 1);
+		obj.addEdge( e10, 6, 2);
+		obj.addEdge( e11, 7, 3);
+		obj.addEdge( e12, 3, 1);
+		obj.addEdge( e13, 6, 1);
+		obj.addEdge( e14, 7, 5);
+		obj.addEdge( e15, 7, 0);
 
 		Triangle t01 = MemMgr.Triangle();
 		Triangle t00 = MemMgr.Triangle();
@@ -639,6 +736,10 @@ public class GeometryFactory
 		Triangle t05 = MemMgr.Triangle();
 		Triangle t06 = MemMgr.Triangle();
 		Triangle t07 = MemMgr.Triangle();
+
+		//------------------------------------------------------- 
+		// Hard-coding some materials to test different rendering
+		//  modes.  In a normal usage these should NOT be set here
 
 		// Transp cyan fogged
 		Material texture = MemMgr.Material();
@@ -708,23 +809,24 @@ public class GeometryFactory
 		t06.setTexture( (float)1.0, (float)0.0, (float)1.0, (float)1.0, (float)0.0, (float)0.0); 
 		t07.setTexture( (float)1.0, (float)1.0, (float)0.0, (float)1.0, (float)0.0, (float)0.0); 
 
-		addTriangle( t00,  0, 3, 1,  0, 3, 12 );
-		addTriangle( t01,  1, 3, 2,  1, 12, 2 );
-		addTriangle( t02,  5, 1, 6,  9, 13, 5 );
-		addTriangle( t03,  1, 2, 6,  1, 10, 13);
-		addTriangle( t04,  4, 5, 7,  7, 4, 14 );
-		addTriangle( t05,  5, 6, 7,  5, 6, 14 );
-		addTriangle( t06,  4, 7, 0,  7, 15, 8 );
-		addTriangle( t07,  7, 3, 0,  15, 11, 3);
+		obj.addTriangle( t00,  0, 3, 1,  0, 3, 12 );
+		obj.addTriangle( t01,  1, 3, 2,  1, 12, 2 );
+		obj.addTriangle( t02,  5, 1, 6,  9, 13, 5 );
+		obj.addTriangle( t03,  1, 2, 6,  1, 10, 13);
+		obj.addTriangle( t04,  4, 5, 7,  7, 4, 14 );
+		obj.addTriangle( t05,  5, 6, 7,  5, 6, 14 );
+		obj.addTriangle( t06,  4, 7, 0,  7, 15, 8 );
+		obj.addTriangle( t07,  7, 3, 0,  15, 11, 3);
 
-		calcVertexNormals();
+		obj.calcVertexNormals();
 		
-	
+		return obj;
 	}
 
-	public staticvoid makeCube()
+	public static Obj makeCube()
 	{
 		int [] text = new int[128*128];
+		Obj obj = MemMgr.Obj();
 
 		for (int i=0; i<4; i++) {
 
@@ -754,14 +856,14 @@ public class GeometryFactory
 		Vertex v6 = MemMgr.Vertex( (float) 1.0, (float)-1.0, (float) 1.0);
 		Vertex v7 = MemMgr.Vertex( (float)-1.0, (float)-1.0, (float) 1.0);
 
-		addVertex( v0);
-		addVertex( v1);
-		addVertex( v2);
-		addVertex( v3);
-		addVertex( v4);
-		addVertex( v5);
-		addVertex( v6);
-		addVertex( v7);
+		obj.addVertex( v0);
+		obj.addVertex( v1);
+		obj.addVertex( v2);
+		obj.addVertex( v3);
+		obj.addVertex( v4);
+		obj.addVertex( v5);
+		obj.addVertex( v6);
+		obj.addVertex( v7);
 
 		Edge e00 = MemMgr.Edge();
 		Edge e01 = MemMgr.Edge();
@@ -782,24 +884,24 @@ public class GeometryFactory
 		Edge e16 = MemMgr.Edge();
 		Edge e17 = MemMgr.Edge();
 
-		addEdge( e00, 0, 1);
-		addEdge( e01, 1, 2);
-		addEdge( e02, 2, 3);
-		addEdge( e03, 3, 0);
-		addEdge( e04, 4, 5);
-		addEdge( e05, 5, 6);
-		addEdge( e06, 6, 7);
-		addEdge( e07, 7, 4);
-		addEdge( e08, 4, 0);
-		addEdge( e09, 5, 1);
-		addEdge( e10, 6, 2);
-		addEdge( e11, 7, 3);
-		addEdge( e12, 3, 1);
-		addEdge( e13, 6, 1);
-		addEdge( e14, 7, 5);
-		addEdge( e15, 7, 0);
-		addEdge( e16, 4, 1);
-		addEdge( e17, 7, 2);
+		obj.addEdge( e00, 0, 1);
+		obj.addEdge( e01, 1, 2);
+		obj.addEdge( e02, 2, 3);
+		obj.addEdge( e03, 3, 0);
+		obj.addEdge( e04, 4, 5);
+		obj.addEdge( e05, 5, 6);
+		obj.addEdge( e06, 6, 7);
+		obj.addEdge( e07, 7, 4);
+		obj.addEdge( e08, 4, 0);
+		obj.addEdge( e09, 5, 1);
+		obj.addEdge( e10, 6, 2);
+		obj.addEdge( e11, 7, 3);
+		obj.addEdge( e12, 3, 1);
+		obj.addEdge( e13, 6, 1);
+		obj.addEdge( e14, 7, 5);
+		obj.addEdge( e15, 7, 0);
+		obj.addEdge( e16, 4, 1);
+		obj.addEdge( e17, 7, 2);
 
 		Triangle t01 = MemMgr.Triangle();
 		Triangle t00 = MemMgr.Triangle();
@@ -813,6 +915,11 @@ public class GeometryFactory
 		Triangle t09 = MemMgr.Triangle();
 		Triangle t10 = MemMgr.Triangle();
 		Triangle t11 = MemMgr.Triangle();
+		
+		//------------------------------------------------------- 
+		// Hard-coding some materials to test different rendering
+		//  modes.  In a normal usage these should NOT be set here
+
 		// Gouraud shaded
 		Material texture = MemMgr.Material();
 		texture._lightmodel  = Material.FOG;
@@ -833,6 +940,7 @@ public class GeometryFactory
 		t09.mat = texture;
 		t10.mat = texture;
 		t11.mat = texture;
+		
 		// Red/white checkerboard texture, solid shaded
 		texture = MemMgr.Material();
 		t00.setTexture( (float)1.0, (float)0.0, (float)1.0, (float)1.0, (float)0.0, (float)0.0); 
@@ -850,6 +958,7 @@ public class GeometryFactory
 		texture.SPEED = Material.FAST16;
 		t00.mat = texture;
 		t01.mat = texture;
+
 		// Red/white checkerboard texture, flat shaded
 		texture = MemMgr.Material();
 		t04.setTexture( (float)0.0, (float)0.0, (float)2.0, (float)0.0, (float)0.0, (float)1.0); 
@@ -868,20 +977,137 @@ public class GeometryFactory
 		t04.mat = texture;
 		t05.mat = texture;
 
-		addTriangle( t00,  0, 3, 1,  0, 3, 12 );
-		addTriangle( t01,  1, 3, 2,  1, 12, 2 );
-		addTriangle( t02,  5, 1, 6,  9, 13, 5 );
-		addTriangle( t03,  1, 2, 6,  1, 10, 13);
-		addTriangle( t04,  4, 5, 7,  7, 4, 14 );
-		addTriangle( t05,  5, 6, 7,  5, 6, 14 );
-		addTriangle( t06,  4, 7, 0,  7, 15, 8 );
-		addTriangle( t07,  7, 3, 0,  15, 11, 3);
-		addTriangle( t08,  4, 0, 1,  8, 0, 16 );
-		addTriangle( t09,  4, 1, 5,  16, 9, 4 );
-		addTriangle( t10,  7, 2, 3,  11, 17, 2);
-		addTriangle( t11,  7, 6, 2,  17, 6, 10);
+		obj.addTriangle( t00,  0, 3, 1,  0, 3, 12 );
+		obj.addTriangle( t01,  1, 3, 2,  1, 12, 2 );
+		obj.addTriangle( t02,  5, 1, 6,  9, 13, 5 );
+		obj.addTriangle( t03,  1, 2, 6,  1, 10, 13);
+		obj.addTriangle( t04,  4, 5, 7,  7, 4, 14 );
+		obj.addTriangle( t05,  5, 6, 7,  5, 6, 14 );
+		obj.addTriangle( t06,  4, 7, 0,  7, 15, 8 );
+		obj.addTriangle( t07,  7, 3, 0,  15, 11, 3);
+		obj.addTriangle( t08,  4, 0, 1,  8, 0, 16 );
+		obj.addTriangle( t09,  4, 1, 5,  16, 9, 4 );
+		obj.addTriangle( t10,  7, 2, 3,  11, 17, 2);
+		obj.addTriangle( t11,  7, 6, 
+		
+		obj.calcVertexNormals();
 
-		calcVertexNormals();
+		return Obj;
 	}
+
+	public static Obj makeOpenBox()
+    {
+		int [] text = new int[128*128];
+		Obj obj = MemMgr.Obj();
+		
+		for (int i=0; i<4; i++) {
+			
+			for (int j=0; j<4; j++) {
+			
+				for (int k=0; k<16; k++) {
+					
+					for (int l=0; l<16; l++) {
+					
+						text[ i*32 + j*32*128 + k+16 + (l+16)*128 ] =
+							text[ i*32 + j*32*128 + k + l*128 ] =
+							(255<<24) + (255<<16);
+						text[ i*32 + j*32*128 + k+16 + l*128 ] =
+							text[ i*32 + j*32*128 + k + (l+16)*128 ] =
+							(255<<24) + (255<<16) + (255<<8) + 255;
+					}
+				}
+			}
+		}
+		
+		Vertex v0 = MemMgr.Vertex( (float)-1.0, (float) 1.0, (float)-1.0);
+		Vertex v1 = MemMgr.Vertex( (float) 1.0, (float) 1.0, (float)-1.0);
+		Vertex v2 = MemMgr.Vertex( (float) 1.0, (float)-1.0, (float)-1.0);
+		Vertex v3 = MemMgr.Vertex( (float)-1.0, (float)-1.0, (float)-1.0);
+		Vertex v4 = MemMgr.Vertex( (float)-1.0, (float) 1.0, (float) 1.0);
+		Vertex v5 = MemMgr.Vertex( (float) 1.0, (float) 1.0, (float) 1.0);
+		Vertex v6 = MemMgr.Vertex( (float) 1.0, (float)-1.0, (float) 1.0);
+		Vertex v7 = MemMgr.Vertex( (float)-1.0, (float)-1.0, (float) 1.0);
+		
+		obj.addVertex( v0);
+		obj.addVertex( v1);
+		obj.addVertex( v2);
+		obj.addVertex( v3);
+		obj.addVertex( v4);
+		obj.addVertex( v5);
+		obj.addVertex( v6);
+		obj.addVertex( v7);
+		
+		Edge e00 = MemMgr.Edge();
+		Edge e01 = MemMgr.Edge();
+		Edge e02 = MemMgr.Edge();
+		Edge e03 = MemMgr.Edge();
+		Edge e04 = MemMgr.Edge();
+		Edge e05 = MemMgr.Edge();
+		Edge e06 = MemMgr.Edge();
+		Edge e07 = MemMgr.Edge();
+		Edge e08 = MemMgr.Edge();
+		Edge e09 = MemMgr.Edge();
+		Edge e10 = MemMgr.Edge();
+		Edge e11 = MemMgr.Edge();
+		//Edge e12 = MemMgr.Edge();
+		Edge e13 = MemMgr.Edge();
+		//Edge e14 = MemMgr.Edge();
+		Edge e15 = MemMgr.Edge();
+		Edge e16 = MemMgr.Edge();
+		Edge e17 = MemMgr.Edge();
+		
+		obj.addEdge( e00, 0, 1);
+		obj.addEdge( e01, 1, 2);
+		obj.addEdge( e02, 2, 3);
+		obj.addEdge( e03, 3, 0);
+		obj.addEdge( e04, 4, 5);
+		obj.addEdge( e05, 5, 6);
+		obj.addEdge( e06, 6, 7);
+		obj.addEdge( e07, 7, 4);
+		obj.addEdge( e08, 4, 0);
+		obj.addEdge( e09, 5, 1);
+		obj.addEdge( e10, 6, 2);
+		obj.addEdge( e11, 7, 3);
+		//addEdge( e12, 3, 1);
+		obj.addEdge( e13, 6, 1);
+		//addEdge( e14, 7, 5);
+		obj.addEdge( e15, 7, 0);
+		obj.addEdge( e16, 4, 1);
+		obj.addEdge( e17, 7, 2);
+		
+		Triangle t01 = MemMgr.Triangle();
+		Triangle t00 = MemMgr.Triangle();
+		Triangle t02 = MemMgr.Triangle();
+		Triangle t03 = MemMgr.Triangle();
+		Triangle t04 = MemMgr.Triangle();
+		Triangle t05 = MemMgr.Triangle();
+		Triangle t06 = MemMgr.Triangle();
+		Triangle t07 = MemMgr.Triangle();
+		Triangle t08 = MemMgr.Triangle();
+		Triangle t09 = MemMgr.Triangle();
+		Triangle t10 = MemMgr.Triangle();
+		Triangle t11 = MemMgr.Triangle();
+		
+		//addTriangle( t00,  0, 3, 1,  0, 3, 12 );
+		//addTriangle( t01,  1, 3, 2,  1, 12, 2 );
+		
+		obj.addTriangle( t02,  5, 1, 6,  9, 12, 5 );
+		obj.addTriangle( t03,  1, 2, 6,  1, 10, 12);
+		
+		//addTriangle( t04,  4, 5, 7,  7, 4, 14 );
+		//addTriangle( t05,  5, 6, 7,  5, 6, 14 );
+		
+		obj.addTriangle( t06,  4, 7, 0,  7, 13, 8 );
+		obj.addTriangle( t07,  7, 3, 0,  13, 11, 3);
+		obj.addTriangle( t08,  4, 0, 1,  8, 0, 14 );
+		obj.addTriangle( t09,  4, 1, 5,  14, 9, 4 );
+		obj.addTriangle( t10,  7, 2, 3,  11, 15, 2);
+		obj.addTriangle( t11,  7, 6, 2,  15, 6, 10);
+		
+		obj.calcVertexNormals();
+
+		return obj;
+    }
+    
 
 }

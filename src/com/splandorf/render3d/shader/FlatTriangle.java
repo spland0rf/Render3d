@@ -1,55 +1,7 @@
 package com.splandorf.render3d.shader;
 
 static class FlatTriangle extends Shader {
-/**
-					} else if (mat._lightmodel == Material.FLAT) {
 
-						if (mat.TEXTURE == true) {
-							
-							// Find light contribution to face.
-							illuminate( n, light);
-							
-							color = mat._color;
-							red   = (int)((float)255.0 * light.x);
-							green = (int)((float)255.0 * light.y);
-							blue  = (int)((float)255.0 * light.z);
-							if (red  >255) red   = 255;
-							if (green>255) green = 255;
-							if (blue >255) blue  = 255;
-							mat._dif_R = red;
-							mat._dif_G = green;
-							mat._dif_B = blue;
-							
-							if (mat.SPEED >= Material.FAST) {
-								fastFlatTextureTriangle( t, mat);
-							} else {
-								flatTextureTriangle( t, mat);	
-							}
-
-						} else {
-						
-							// Find light contribution to face.
-							illuminate( n, light);
-							
-							color = mat._color;
-							red   = (int)((float)((color>>16) & 255) * light.x);
-							green = (int)((float)((color>>8 ) & 255) * light.y);
-							blue  = (int)((float)( color      & 255) * light.z);
-							if (red  >255) red   = 255;
-							if (green>255) green = 255;
-							if (blue >255) blue  = 255;
-							color = (255<<24) + (red<<16) + (green<<8) + (blue);
-						
-							solidTriangle( t, color, mat);
-						}
-
-//==================
-
-*/
-
-
-
-	
 	// Slow! Texture-corrects every pixel!
 	public void flatTextureTriangle( Triangle t, Material mat)
 	{
@@ -120,9 +72,9 @@ static class FlatTriangle extends Shader {
 			for (int i=v1.y; i<v2.y; i++) {
 				if (i>0 && i<_height) {
 					if (mat.SPEED == Material.SLOW) {
-						flatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+						drawFlatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
 					} else if (mat.SPEED == Material.FAST16) {
-						fast16flatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+						drawFast16flatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
 					}
 				}
 				lx += dx_1_3;
@@ -152,9 +104,9 @@ static class FlatTriangle extends Shader {
 			for (int i=v2.y; i<v3.y; i++) {
 				if (i>0 && i<_height) {
 					if (mat.SPEED == Material.SLOW) {
-						flatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+						drawFlatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
 					} else if (mat.SPEED == Material.FAST16) {
-						fast16flatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+						drawFast16flatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
 					}
 				}
 				lx += dx_1_3;
@@ -170,7 +122,7 @@ static class FlatTriangle extends Shader {
 	}
 
 	// Slow!  Texture-corrects every pixel!
-	public void flatTextureSpan( int y, int lx, int rx, float lz, float rz, 
+	public void drawFlatTextureSpan( int y, int lx, int rx, float lz, float rz, 
 									float ls, float rs, float lt, float rt, Material mat)
 	{
 		// Make sure we're drawing left->right.
@@ -257,7 +209,7 @@ static class FlatTriangle extends Shader {
 	}
 
 	// Slow!  Texture-corrects every pixel!
-	public void fast16flatTextureSpan( int y, int lx, int rx, float lz, float rz, 
+	public void drawFast16flatTextureSpan( int y, int lx, int rx, float lz, float rz, 
 									float ls, float rs, float lt, float rt, Material mat)
 	{
 		// Make sure we're drawing left->right.
@@ -502,8 +454,9 @@ static class FlatTriangle extends Shader {
 		if (dy_1_2 != 0) {
 
 			for (int i=v1.y; i<v2.y; i++) {
-				if (i>0 && i<_height) 
-					fastFlatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+				if (i>0 && i<_height) {
+					drawFastFlatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_1_2;
 				lz += dz_1_3;
@@ -529,8 +482,9 @@ static class FlatTriangle extends Shader {
 		if (dy_2_3 != 0) {
 
 			for (int i=v2.y; i<v3.y; i++) {
-				if (i>0 && i<_height) 
-					fastFlatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+				if (i>0 && i<_height) {
+					drawFastFlatTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_2_3;
 				lz += dz_1_3;

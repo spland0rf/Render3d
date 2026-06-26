@@ -2,23 +2,28 @@ package com.splandorf.render3d;
 
 import com.splandorf.render3d.Ctm;
 import com.splandorf.render3d.Node;
+import com.splandorf.render3d.Render;
 
 class Group extends Node
 {
-    public Vector children;
+    public Vector children = new Vector(10);;
 
-    public rGroup(String new_name, render rend)
+    public Group(String new_name)
     {
-        super( new_name, rend);
-        children = new Vector(10);
+        super( new_name);
+    }
+
+    public Group() {
+        super();
     }
 
     public void addChild( rNode rNode)
     {
-	children.addElement( rNode);
+        super();
+	    children.addElement( rNode);
     }
 
-    public void render( Mat4f xform, Mat4f nxform, float time)
+    public void render( Render rend, Mat4f xform, Mat4f nxform, float time)
     {
         Mat4f my_xform   = MemMgr.Mat4f();
         Mat4f my_n_xform = MemMgr.Mat4f();
@@ -29,7 +34,7 @@ class Group extends Node
         rNode child;
         for (int i=0; i<children.size(); i++) {
             child = (rNode)children.elementAt(i);
-            child.render( my_xform, my_n_xform, time);
+            child.render( rend, my_xform, my_n_xform, time);
         }
 
         MemMgr.done( my_xform);

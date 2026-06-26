@@ -95,7 +95,9 @@ public class PhongTriangle extends Shader
 		if (dy_1_2 != 0) {
 
 			for (int i=v1.y; i<v2.y; i++) {
-				if (i>0 && i<_height) phongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
+				if (i>0 && i<_height) {
+					phongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_1_2;
 				lz += dz_1_3;
@@ -120,7 +122,9 @@ public class PhongTriangle extends Shader
 		if (dy_2_3 != 0) {
 
 			for (int i=v2.y; i<v3.y; i++) {
-				if (i>0 && i<_height) phongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
+				if (i>0 && i<_height) {
+					phongSpan( i, lx>>16, rx>>16, lz, rz, la, ra, lb, rb, color, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_2_3;
 				lz += dz_1_3;
@@ -202,6 +206,9 @@ public class PhongTriangle extends Shader
 //					green = (((color>>8)  & 255) * (int)(l.y*255.0))>>8;
 //					blue  = (( color      & 255) * (int)(l.z*255.0))>>8;
 
+					// "Fake" Phong lighting by using a pre-computed environment map!
+					// Need to do some archaeology on where that environment map comes from:
+					// loaded from a file, or precomputed based on light positions in the scene?
 					_pix [ pixel ] = _env_map[ (a>>9)%128 + ((127-(b>>9))%128)*128 ]; //(255<<24) + (red<<16) + (green<<8) + blue;
 					_zbuf[ pixel ] = z;
 //					}

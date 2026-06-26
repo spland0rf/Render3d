@@ -1118,7 +1118,7 @@ public class render extends Applet implements Runnable
 		    
 		    if (mat._lightmodel == rMaterial.TRANSP) {
 			
-			transpTriangle( t, mat);
+				transpTriangle( t, mat);
 			    
 		    } else if (mat._lightmodel == rMaterial.PHONG) {
 			    
@@ -1137,9 +1137,9 @@ public class render extends Applet implements Runnable
 			    Alg.normalize( t.v3.w_n);
 			    
 			    if (mat.BUMP==false) {
-				phongTriangle( t, mat);
+					phongTriangle( t, mat);
 			    } else {
-				bumpTriangle( t, mat);
+					bumpTriangle( t, mat);
 			    }
 			} else if (mat._lightmodel == rMaterial.GOURAUD) {
 			    

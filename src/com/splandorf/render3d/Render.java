@@ -22,7 +22,7 @@ import VecSi;
 import Mat4f;
 import MemMgr;
 
-public class render extends Applet implements Runnable
+public class Render extends Applet implements Runnable
 {
     MemoryImageSource mis = null;
     Image temp_image = null;
@@ -51,7 +51,7 @@ public class render extends Applet implements Runnable
     int SUBDIV_SIZE = 16;
     int MAX24BIT = (255<<16) + (255<<8) + 255;
 
-    rGroup _scene_root = null;
+    Group _scene_root = null;
 
     Ctm _cam_ctm = null;
     Vec3f _from = null;
@@ -82,14 +82,14 @@ public class render extends Applet implements Runnable
 
     Vector _transpQueue = null;
     
-    public render()
+    public Render()
     {
 		_app = this;
     }
     
 	public void init()
     {
-		_scene_root = new rGroup( "ROOT", this);
+		_scene_root = new Group( "ROOT");
 
 		//parseVRML();
 
@@ -145,86 +145,11 @@ public class render extends Applet implements Runnable
 
 		_background = loadTexture( "textures/night_sky_background.jpg", null);
 
-		_wu_array = makeWuUnitPointArray( 8);
+		_wu_array = GeometryFactory.makeWuUnitPointArray( 8);
     }
 
-    public static int[][] makeGaussianDotArrays( int resolution, int step_size)
-    {
-		int [][] dot_array = new int[step_size][resolution*resolution];
-		double radius, distance, intensity, distX, distY;
 
-		for (int k=0; k<step_size; k++) {
-
-			radius = (double)(step_size-k) / (double)step_size;
-			
-			for (int j=0; j<resolution; j++) {
-			
-			for (int i=0; i<resolution; i++) {
-				
-				distX = ((double)i - (double)(resolution/2)) / (double)(resolution/2);
-				distY = ((double)j - (double)(resolution/2)) / (double)(resolution/2) ;
-				distance = Math.sqrt( distX*distX + distY*distY) * 0.6;
-				if (distance < radius) {
-				intensity = 1.0 - (distance/radius);
-				double inten2 = intensity*intensity;
-
-				//			intensity = (inten2*inten2*intensity) *2.0;
-				/*
-				if (intensity<0.05) {
-					intensity += intensity;
-				} else {
-					intensity += 0.05;
-				}
-				*/
-				
-				//			intensity *= intensity;
-				//			intensity *= intensity;
-				intensity = inten2 * inten2;
-				intensity *= 1.5;
-				
-				if (intensity > 1.0) intensity=1.0;
-				} else {
-				intensity = 0;
-				}
-				dot_array[k][j*resolution+i] = (int)(255.0  * intensity);
-			}
-			}
-		}
-		return dot_array;
-    }
-
-    public static int[] makeWuUnitPointArray( int resolution)
-    {
-		int [] wu_array = new int[ resolution * resolution];
-
-		int wu_00, wu_01, wu_10, wu_11;
-
-		for (int j=0; j<resolution; j++) {
-			
-			for (int i=0; i<resolution; i++) {
-
-			wu_00 = ((resolution-i) * (resolution-j))*4;
-			wu_01 = ((resolution-i) * j) * 4;
-			wu_10 = (i * (resolution-j)) * 4;
-			wu_11 = (i * j) * 4;
-			if (wu_00 == 256) wu_00 = 255;
-			if (wu_01 == 256) wu_01 = 255;
-			if (wu_10 == 256) wu_10 = 255;
-			if (wu_11 == 256) wu_11 = 255;
-
-			
-			//		System.out.println("wu_00: " + wu_00 + "  wu_01: " + wu_01 + "  wu_10: " + wu_10 + "  wu_11: " + wu_11 + "  sum: " + (wu_00 + wu_01 + wu_10 + wu_11));
-
-			wu_array[ j*resolution + i] = (wu_00<<24) + (wu_01<<16) + (wu_10<<8) + (wu_11) ;
-
-			}
-
-		}
-
-		return wu_array;
-    }
-    
-    public static int[] loadTexture( String filename, rMaterial mat)
+    public static int[] loadTexture( String filename, Material mat)
     {
 		// Load the image
 		Image texture_img = null;
@@ -234,7 +159,7 @@ public class render extends Applet implements Runnable
 			mt.addImage( texture_img, 0);
 			mt.waitForAll();
 		} catch (InterruptedException e) {
-			System.err.println("render::loadTexture(): Couldn't load " + filename);
+			System.err.println("Render::loadTexture(): Couldn't load " + filename);
 			e.printStackTrace();
 		}
 		
@@ -248,7 +173,7 @@ public class render extends Applet implements Runnable
 		try {
 			pg.grabPixels();
 		} catch (Exception e) {
-			System.err.println("For some incredibly lame reason, render::loadTexture() couldn't grab pixels.");
+			System.err.println("For some incredibly lame reason, R::loadTexture() couldn't grab pixels.");
 			e.printStackTrace();
 		}
 		
@@ -268,55 +193,55 @@ public class render extends Applet implements Runnable
 		return src_pixels;
     }
 
-    public static int[] loadBumpMap( String filename, rMaterial mat)
+    public static int[] loadBumpMap( String filename, Material mat)
     {
-	int [] height_map = loadTexture( filename, mat);
+		int [] height_map = loadTexture( filename, mat);
 
-	int [] bump_map = new int[256*256];
+		int [] bump_map = new int[256*256];
 
-	if (height_map.length != 256*256) {
-	    System.err.println("Bump maps must be 256x256 pixels!");
-	    for (int i=0; i<256*256; i++) bump_map[i] = (127<<8) + 127;
-	    return bump_map;
-	}
-
-	for (int i=0; i<256*256; i++) {
-	    height_map[i] = (height_map[i])&255;
-	}
-
-	int s;
-	int t;
-
-	for (int i=0; i<256; i++) {
-	    for ( int j=0; j<256; j++) {
-
-		if ( (i==0||i==255) && (j==0||j==255) ) {
-		    s = 0;
-		    t = 0;
-		} else {
-		    if (i==0) {
-			s = height_map[ 1 + j*256] - height_map[ 255 + j*256];
-		    } else if (i==255) {
-			s = height_map[ 0 + j*256] - height_map[ 254 + j*256];
-		    } else {
-			s = height_map[ i+1 + j*256] - height_map[ i-1 + j*256];
-		    }
-		    
-		    if (j==0) {
-			t = height_map[ i + 1*256] - height_map[ i + 255*256];
-		    } else if (j==255) {
-			t = height_map[ i + 0*256] - height_map[ i + 254*256];
-		    } else {
-			t = height_map[ i + (j+1)*256] - height_map[ i + (j-1)*256];
-		    }
+		if (height_map.length != 256*256) {
+			System.err.println("Bump maps must be 256x256 pixels!");
+			for (int i=0; i<256*256; i++) bump_map[i] = (127<<8) + 127;
+			return bump_map;
 		}
-		s = (s+255)/2;
-		t = (t+255)/2;
-		    
-		bump_map[ i + 256*j ] = (s<<8) + t;
-	    }
-	}
-	return bump_map;
+
+		for (int i=0; i<256*256; i++) {
+			height_map[i] = (height_map[i])&255;
+		}
+
+		int s;
+		int t;
+
+		for (int i=0; i<256; i++) {
+			for ( int j=0; j<256; j++) {
+
+				if ( (i==0||i==255) && (j==0||j==255) ) {
+					s = 0;
+					t = 0;
+				} else {
+					if (i==0) {
+					s = height_map[ 1 + j*256] - height_map[ 255 + j*256];
+					} else if (i==255) {
+					s = height_map[ 0 + j*256] - height_map[ 254 + j*256];
+					} else {
+					s = height_map[ i+1 + j*256] - height_map[ i-1 + j*256];
+					}
+					
+					if (j==0) {
+					t = height_map[ i + 1*256] - height_map[ i + 255*256];
+					} else if (j==255) {
+					t = height_map[ i + 0*256] - height_map[ i + 254*256];
+					} else {
+					t = height_map[ i + (j+1)*256] - height_map[ i + (j-1)*256];
+					}
+				}
+				s = (s+255)/2;
+				t = (t+255)/2;
+					
+				bump_map[ i + 256*j ] = (s<<8) + t;
+			}
+		}
+		return bump_map;
     }
     
     
@@ -372,6 +297,8 @@ public class render extends Applet implements Runnable
 		return map;
 	}
 /**
+ * Old initialize.  Keep around for funsies.
+ * 
 	public void initialize()
 	{
 		_mgr = new MemMgr();
@@ -461,8 +388,8 @@ public class render extends Applet implements Runnable
 	*/
 	public void initialize()
 	{
-		_mgr = new MemMgr();
 		System.err.println("init.");
+		_mgr = new MemMgr();
 		Alg.initTrig();
 		
 		// Initialize lights, ambient and directional.
@@ -519,7 +446,6 @@ public class render extends Applet implements Runnable
 		_at = MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0);
 		_up = MemMgr.Vec3f((float)0.0, (float)100.0, (float)0.0);
 		
-		
 		makeTestScene();
 		
 		_cam_ctm = new Ctm();
@@ -542,23 +468,12 @@ public class render extends Applet implements Runnable
 		_initialized = true;
     }
     
-    protected void createRandomPointfield( Obj pointfield, int n_points, float radius)
-    {
-		float x, y, z;
-		for ( int i=0; i<n_points; i++) {
-			x = ((float)(Math.random()) * (float)2.0 * radius) - radius;
-			y = ((float)(Math.random()) * (float)2.0 * radius) - radius;
-			z = ((float)(Math.random()) * (float)2.0 * radius) - radius;
-			pointfield.addVertex( MemMgr.Vertex( x, y, z) );
-		}
-    }
-
     
     protected void makeTestScene()
     {		
-		Obj wu_points = new Obj("WU", this);
-		createRandomPointfield( wu_points, 200, (float)5.0);
-		rMaterial wu_mat = MemMgr.rMaterial();
+		Obj wu_points = GeometryFactory.makeRandomPointfield( 200, (float)5.0);
+		wu_points.setName( "WU_POINTS");
+		Material wu_mat = MemMgr.Material();
 		wu_mat.TRIANGLES = false;
 		wu_mat.WIREFRAME = false;
 		wu_mat.POINTSET = true;
@@ -573,56 +488,55 @@ public class render extends Applet implements Runnable
 		wu_mat._far_blue = 500;
 		wu_mat._gaussian_res = 32;
 		wu_mat._n_gaussian_dots = 20;
-		wu_mat._gaussian_dots = makeGaussianDotArrays( 32, 20);
-		wu_mat._pointstyle = rMaterial.GAUSSIAN;
+		wu_mat._gaussian_dots = GeometryFactory.makeGaussianDotArrays( 32, 20);
+		wu_mat._pointstyle = Material.GAUSSIAN;
 		wu_points.mat = wu_mat;
 		
-		_cube1 = new Obj("CUBE1", this);
-		_cube1.makeOpenBox();
-		rMaterial t1  = MemMgr.rMaterial();
-		t1._lightmodel = rMaterial.TRANSP;
+		_cube1 = GeometryFactory.makeOpenBox();
+		_cube1.setName( "CUBE1");
+		Material t1  = MemMgr.Material();
+		t1._lightmodel = Material.TRANSP;
 		t1._color = (255<<24) + (70<<16) + (50<<8) + 0;
 		t1.BACKFACE_CULL = false;
 		t1.WIREFRAME = true;
 		t1.TRIANGLES = true;
 		t1.ANTIALIAS = true;
-		t1._linestyle = rMaterial.THICK;
+		t1._linestyle = Material.THICK;
 		_cube1.mat = t1;
 		
-		_cube4 = new Obj("CUBE4", this);
-		_cube4.makeOpenBox();
-		rMaterial t4 = MemMgr.rMaterial();
-		t4._lightmodel = rMaterial.TRANSP;
+		_cube4 = GeometryFactory.makeOpenBox();
+		_cube4.setName( "CUBE4");
+		Material t4 = MemMgr.Material();
+		t4._lightmodel = Material.TRANSP;
 		t4._color = (255<<24) + (0<<16) + (70<<8) + 50;
 		t4.BACKFACE_CULL = false;
 		t4.WIREFRAME = true;
 		t4.TRIANGLES = true;
 		t4.ANTIALIAS = true;
-		t4._linestyle = rMaterial.THICK;
+		t4._linestyle = Material.THICK;
 		_cube4.mat = t4;
 		
-		_cube5 = new Obj("CUBE5", this);
-		_cube5.makeOpenBox();
-		rMaterial t5 = MemMgr.rMaterial();
-		t5._lightmodel = rMaterial.TRANSP;
+		_cube5 = GeometryFactory.makeOpenBox();
+		_cube5.setName( "CUBE5");
+		Material t5 = MemMgr.Material();
+		t5._lightmodel = Material.TRANSP;
 		t5._color = (255<<24) + (50<<16) + (0<<8) + 70;
 		t5.BACKFACE_CULL = false;
 		t5.WIREFRAME = true;
 		t5.TRIANGLES = true;
 		t5.ANTIALIAS = true;
-		t5._linestyle = rMaterial.THICK;
+		t5._linestyle = Material.THICK;
 		_cube5.mat = t5;
-		
-		_cube2 = new Obj("CUBE2", this);
-		_cube2.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
-		
-		
+				
 		// Metal donut
-		rMaterial texture = MemMgr.rMaterial();
-		texture._lightmodel  = rMaterial.PHONG;
+		_cube2 = GeometryFactory.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
+		_cube2.setName( "METAL_DONUT");
+	
+		Material texture = MemMgr.Material();
+		texture._lightmodel  = Material.PHONG;
 		texture._color = (255<<24) + (255<<16) + (100<<8) + 255;
 		//		texture.TEXTURE = true;
-		texture.SPEED = rMaterial.FAST;
+		texture.SPEED = Material.FAST;
 		texture._env_map = loadTexture("environments/envplane.gif", texture);
 		//		texture._env_map = makeLightMap();
 		texture._bump_map = loadBumpMap( "textures/weave_height2.gif", texture);
@@ -634,18 +548,18 @@ public class render extends Applet implements Runnable
 		texture._fog_near_val = (float)0.0;
 		texture._fog_far_val  = (float)1.0;
 		texture.ANTIALIAS = true;
-		texture._linestyle = rMaterial.THICK;
+		texture._linestyle = Material.THICK;
 		texture.BUMP = true;
 		_cube2.mat = texture;
 		
-		_cube3 = new Obj("CUBE3", this);
-		_cube3.makeSphere( 7, 13, (float)0.0, (float)2.0, (float)0.0, (float)2.0);
-		
-		texture = MemMgr.rMaterial();
-		texture._lightmodel  = rMaterial.GOURAUD;
+		// Sphere
+		_cube3 = GeometryFactory.makeSphere( 7, 13, (float)0.0, (float)2.0, (float)0.0, (float)2.0);
+		_cube3.setName( "SPHERE");
+		texture = MemMgr.Material();
+		texture._lightmodel  = Material.GOURAUD;
 		texture._color = (255<<24) + (255<<16) + (255<<8) + 255;
 		//		texture.TEXTURE = true;
-		texture.SPEED = rMaterial.FAST;
+		texture.SPEED = Material.FAST;
 		//		texture.TRANSPARENT = true;
 		texture._transp_R = 150;
 		texture._transp_G = 150;
@@ -658,16 +572,15 @@ public class render extends Applet implements Runnable
 		texture._fog_near_val = (float)0.0;
 		texture._fog_far_val  = (float)1.0;
 		texture.ANTIALIAS = true;
-		texture._linestyle = rMaterial.THICK;
+		texture._linestyle = Material.THICK;
 		texture.TRIANGLES = true;
 		texture.WIREFRAME = true;
 		_cube3.mat = texture;
-		
 
 
-		Obj flare1 = new Obj( "FLARE1", this);
-		texture = MemMgr.rMaterial();
-		texture._lightmodel = rMaterial.FLARE;
+		Obj flare1 = new Obj( "FLARE1");
+		texture = MemMgr.Material();
+		texture._lightmodel = Material.FLARE;
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
@@ -675,9 +588,9 @@ public class render extends Applet implements Runnable
 		flare1.ctm().set_trans( (float)0.0, (float)2.7, (float)0.0);
 		flare1.mat = texture;
 		
-		Obj flare2 = new Obj( "FLARE2", this);
-		texture = MemMgr.rMaterial();
-		texture._lightmodel = rMaterial.FLARE;
+		Obj flare2 = new Obj( "FLARE2");
+		texture = MemMgr.Material();
+		texture._lightmodel = Material.FLARE;
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
@@ -685,9 +598,9 @@ public class render extends Applet implements Runnable
 		flare2.ctm().set_trans( (float)0.0, (float)-2.7, (float)0.0);
 		flare2.mat = texture;
 		
-		Obj flare3 = new Obj( "FLARE3", this);
-		texture = MemMgr.rMaterial();
-		texture._lightmodel = rMaterial.FLARE;
+		Obj flare3 = new Obj( "FLARE3");
+		texture = MemMgr.Material();
+		texture._lightmodel = Material.FLARE;
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
@@ -695,9 +608,9 @@ public class render extends Applet implements Runnable
 		flare3.ctm().set_trans( (float)0.0, (float)0.0, (float)2.7);
 		flare3.mat = texture;
 		
-		Obj flare4 = new Obj( "FLARE4", this);
-		texture = MemMgr.rMaterial();
-		texture._lightmodel = rMaterial.FLARE;
+		Obj flare4 = new Obj( "FLARE4");
+		texture = MemMgr.Material();
+		texture._lightmodel = Material.FLARE;
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
@@ -705,15 +618,18 @@ public class render extends Applet implements Runnable
 		flare4.ctm().set_trans( (float)0.0, (float)0.0, (float)-2.7);
 		flare4.mat = texture;
 		
-		Anim flare_rot = new Anim("FLARE_ROT", this);
+		Anim flare_rot = new Anim("FLARE_ROT");
 		flare_rot.addChild( flare1);
 		flare_rot.addChild( flare2);
 		flare_rot.addChild( flare3);
 		flare_rot.addChild( flare4);
-		flare_rot.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)2.8,
-					MemMgr.Vec3f( (float)0.0, (float)0.0, (float)0.0),
-					MemMgr.Vec3f( (float)6.28318, (float)0.0, (float)0.0) );
-			_scene_root.addChild( flare_rot);
+		flare_rot.initAnim( 
+			Anim.ROT, Anim.CONTINUOUS, 
+			(float)0.0, (float)99.0, (float)2.8,
+			MemMgr.Vec3f( (float)0.0, (float)0.0, (float)0.0),
+			MemMgr.Vec3f( (float)6.28318, (float)0.0, (float)0.0) 
+		);
+		_scene_root.addChild( flare_rot);
 		
 		/*
 		Anim rot_root = new Anim("ROT1", this);
@@ -724,7 +640,7 @@ public class render extends Applet implements Runnable
 		*/
 		
 		_cube1.ctm().set_scale( (float)1.3, (float)0.5, (float)0.5);
-		Anim cube1Anim = new Anim("ANIM1", this);
+		Anim cube1Anim = new Anim("ANIM1");
 		cube1Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)9.1,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)6.28318, (float)0.0) );
@@ -732,7 +648,7 @@ public class render extends Applet implements Runnable
 		_scene_root.addChild( cube1Anim);
 		
 		_cube4.ctm().set_scale( (float)0.6, (float)1.75, (float)0.4);
-		Anim cube4Anim = new Anim("ANIM4", this);
+		Anim cube4Anim = new Anim("ANIM4");
 		cube4Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)8.1,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)6.28318, (float)0.0, (float)0.0) );
@@ -740,7 +656,7 @@ public class render extends Applet implements Runnable
 		_scene_root.addChild( cube4Anim);
 		
 		_cube5.ctm().set_scale( (float)0.5, (float)0.6, (float)1.8);
-		Anim cube5Anim = new Anim("ANIM5", this);
+		Anim cube5Anim = new Anim("ANIM5");
 		cube5Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)7.0,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
@@ -748,9 +664,9 @@ public class render extends Applet implements Runnable
 		_scene_root.addChild( cube5Anim);
 		
 		_cube2.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
-		rGroup xform2 = new rGroup("XFORM2", this);
+		Group xform2 = new Group("XFORM2");
 		xform2.ctm().set_trans( (float)-2.9, (float)0.0, (float)0.0);
-		Anim cube2Anim = new Anim("ANIM2", this);
+		Anim cube2Anim = new Anim("ANIM2");
 		cube2Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)2.8,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
@@ -759,9 +675,9 @@ public class render extends Applet implements Runnable
 		//	_scene_root.addChild( xform2);
 		
 		_cube3.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
-		rGroup xform3 = new rGroup("XFORM3", this);
+		Group xform3 = new Group("XFORM3");
 		xform3.ctm().set_trans( (float)2.9, (float)0.0, (float)0.0);
-		Anim cube3Anim = new Anim("ANIM3", this);
+		Anim cube3Anim = new Anim("ANIM3");
 		cube3Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)3.0,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
@@ -841,10 +757,9 @@ public class render extends Applet implements Runnable
 		
 		float _time = (float)0.0;
 		int running = 0;
-		while (true) {
-			//newTime = System.currentTimeMillis();
+		while(true) {
 			
-			renderScene( _time);//(float)(newTime-startTime) / (float)1000.0 );
+			renderScene( _time);
 			_time += 0.01;
 			
 			_renderThread.yield();
@@ -868,7 +783,41 @@ public class render extends Applet implements Runnable
 		}
 	}
 
-   public void renderScene( float cur_time)
+		public void addToTranspQueue( Mat4f xform, Mat4f nxform, Obj obj)
+    {
+		_transpQueue.addElement( xform);
+		_transpQueue.addElement( nxform);
+		_transpQueue.addElement( obj);
+    }
+    
+    protected void renderTranspObjects()
+    {
+		try {
+			Mat4f  xform;
+			Mat4f  nxform;
+			Obj    obj;
+			
+			while (_transpQueue.size() > 0) {
+				xform  = (Mat4f)_transpQueue.elementAt(0);
+				nxform = (Mat4f)_transpQueue.elementAt(1);
+				obj    = (Obj)  _transpQueue.elementAt(2);
+				if (obj.mat.PARTICLE == true) {
+					Sprite.drawParticle( xform, obj);
+				} else {
+					drawTriangles( xform, nxform, obj.tlist);
+				}
+				_transpQueue.removeElementAt(0);
+				_transpQueue.removeElementAt(0);
+				_transpQueue.removeElementAt(0);
+				MemMgr.done( xform);
+				MemMgr.done( nxform);
+			}
+		} catch (Exception e) {
+			System.err.println("Error, wrong datatypes stored in transpQueue!");
+		}
+    }
+
+	public void renderScene( float cur_time)
     {
 		if (_initialized) {
 			
@@ -901,41 +850,6 @@ public class render extends Applet implements Runnable
 			
 		} else {
 			initialize();
-		}
-    }
-    
-
-	public void addToTranspQueue( Mat4f xform, Mat4f nxform, Obj obj)
-    {
-		_transpQueue.addElement( xform);
-		_transpQueue.addElement( nxform);
-		_transpQueue.addElement( obj);
-    }
-    
-    protected void renderTranspObjects()
-    {
-		try {
-			Mat4f  xform;
-			Mat4f  nxform;
-			Obj    obj;
-			
-			while (_transpQueue.size() > 0) {
-				xform  = (Mat4f)_transpQueue.elementAt(0);
-				nxform = (Mat4f)_transpQueue.elementAt(1);
-				obj    = (Obj)  _transpQueue.elementAt(2);
-				if (obj.mat.PARTICLE == true) {
-					Sprite.drawParticle( xform, obj);
-				} else {
-					drawTriangles( xform, nxform, obj.tlist);
-				}
-				_transpQueue.removeElementAt(0);
-				_transpQueue.removeElementAt(0);
-				_transpQueue.removeElementAt(0);
-				MemMgr.done( xform);
-				MemMgr.done( nxform);
-			}
-		} catch (Exception e) {
-			System.err.println("Error, wrong datatypes stored in transpQueue!");
 		}
     }
 
@@ -998,18 +912,13 @@ public class render extends Applet implements Runnable
 		if (light.w > 1.0) light.w = (float)1.0;
 	}
 
-	public void drawTriangles( Mat4f m, Mat4f nm, Vector tlist)
+	public void drawTriangles( Mat4f m, Vector tlist)
 	{
 		Vec3f p1 = MemMgr.Vec3f();
 		Vec3f p2 = MemMgr.Vec3f();
 		Vec3f p3 = MemMgr.Vec3f();
 		Vec3f n  = MemMgr.Vec3f();
 		Vec3f c  = MemMgr.Vec3f();
-		
-		Vec3f test1  = MemMgr.Vec3f();
-		Vec3f test2  = MemMgr.Vec3f();
-		Vec3f test3  = MemMgr.Vec3f();
-			
 		Vec3f light = MemMgr.Vec3f();
 		Vec3f look = MemMgr.Vec3f( (float)0.0, (float)0.0, (float)-1.0);
 		Alg.mult( _cam_ctm.ctm(), look);
@@ -1020,105 +929,58 @@ public class render extends Applet implements Runnable
 		int color = 0;
 		int red, green, blue, inten;
 		float fog;
-		
+
 		Triangle t   = null;
-		rMaterial mat = null;
-		
+		Material mat = null;
+
 		for (int i=0; i<tlist.size(); i++) {
-			
+		
 			// Find triangle normal
 			t = (Triangle)tlist.elementAt(i);
 			mat = t.mat;
 			if (mat==null) {
-			mat = t.obj.mat;
+				mat = t.obj.mat;
 			}
-			Alg.mult( m, t.v1.p, p1);
-			Alg.mult( m, t.v2.p, p2);
-			Alg.mult( m, t.v3.p, p3);
+
+			//Alg.mult( t.obj.ctm().normal_ctm(), t.n, n);
+			//Alg.normalize( n);
+
+			// Find vector from eye to triangle centroid
+			Alg.mult( t.obj.ctm().inv_ctm(), _from, look);
+			Alg.sub( t.c, look);
+			Alg.normalize( look);
+			n = t.n;
 			
-			// Clip against viewport (drop triangles behind eye)
-			if (p1.z > 0.0 && p2.z > 0.0 && p3.z > 0.0 ) {
-			
-				float xf, yf;
+			if ( mat.BACKFACE_CULL == false || Alg.dot( look, n) < 0.0) {
 				
-				// Calculate screen coordintes.  Store integer screen pixel location
-				// [0..width, 0..height], and 16-bit fixed-point subpixel remainder
-				// (to be used for subpixel-accurate rendering of lines and polygons].
-				
-				// X and Y coords must be calculated to accurately determine visibility.
-				// Z coords must only be calculated if polygon is indeed visible (later).
+				// If front-facing, then transform and render
+				Alg.mult( m, t.v1.p, p1);
+				Alg.mult( m, t.v2.p, p2);
+				Alg.mult( m, t.v3.p, p3);
 
-				// X-coords
-				xf     = (p1.x / p1.z * xm);
-				t.v1.x = (int)xf;
-				t.v1.xfrac = (int)( (xf - (float)t.v1.x) * (float)65536.0);
-				t.v1.x += cx;
-				xf     = (p2.x / p2.z * xm);
-				t.v2.x = (int)xf;
-				t.v2.xfrac = (int)( (xf - (float)t.v2.x) * (float)65536.0);
-				t.v2.x += cx;
-				xf     = (p3.x / p3.z * xm);
-				t.v3.x = (int)xf;
-				t.v3.xfrac = (int)( (xf - (float)t.v3.x) * (float)65536.0);
-				t.v3.x += cx;
-				
-				// Y-coords
-				yf     = (p1.y / p1.z * ym);
-				t.v1.y = (int)yf;
-				t.v1.yfrac = (int)( (yf - (float)t.v1.y) * (float)65536.0);
-				t.v1.y += cy;
-				yf     = (p2.y / p2.z * ym);
-				t.v2.y = (int)yf;
-				t.v2.yfrac = (int)( (yf - (float)t.v2.y) * (float)65536.0);
-				t.v2.y += cy;
-				yf     = (p3.y / p3.z * ym);
-				t.v3.y = (int)yf;
-				t.v3.yfrac = (int)( (yf - (float)t.v3.y) * (float)65536.0);
-				t.v3.y += cy;
-				
-				test1.x = (float)(t.v2.x - t.v1.x);
-				test1.y = (float)(t.v2.y - t.v1.y);
-				test1.z = (float)0.0;
-				test2.x = (float)(t.v3.x - t.v2.x);
-				test2.y = (float)(t.v3.y - t.v2.y);
-				test2.z = (float)0.0;
-
-				// Check to see if front-facing based on screen-space
-				// projection of ordered verts 1,2,3: are they
-				// clockwise (visible) or counterclockwise (invisible)?
-				// Note: cross-product of screen-space projected points determines
-				// ordering.  Positive = clockwise, negative = counterclockwise
-
-				Alg.normalize( test1);
-				Alg.normalize( test2);
-				Alg.cross( test1, test2, test3);
-					
-				if ( test3.z > -0.01 || mat.BACKFACE_CULL == false) {
-
-					// Z-calculations need only be done if polygon is to
-					// be rendered.
-				
-					// Z-coords, stored as integer value between [0..(MAXINT/1000)]
-					// This means that all z-values > 1000.0 will be in error.
+				// Clip against viewport (drop triangles behind eye)
+				if (p1.z > 0.0 && p2.z > 0.0 && p3.z > 0.0) {
+					/*
+					Alg.mult( m, t.c, c);
+					int tx = cx + (int)(c.x / c.z * xm);
+					int ty = cy + (int)(c.y / c.z * ym);
+					if (tx>=0 && tx <_width && ty >= 0 && ty<_height) {
+						_pix[ tx + ty*_width] = (255<<24) + (255<<16) + (100<<8) + 100;
+						_zbuf[ tx+ty*_width] = 0;
+					}	
+					*/
+					t.v1.x = cx + (int)(p1.x / p1.z * xm);
+					t.v2.x = cx + (int)(p2.x / p2.z * xm);
+					t.v3.x = cx + (int)(p3.x / p3.z * xm);
+					t.v1.y = cy + (int)(p1.y / p1.z * ym);
+					t.v2.y = cy + (int)(p2.y / p2.z * ym);
+					t.v3.y = cy + (int)(p3.y / p3.z * ym);
 					t.v1.z = (int)( (p1.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
 					t.v2.z = (int)( (p2.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
 					t.v3.z = (int)( (p3.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
-					
-					// Calculate 1/z and store in 16-bit fixed-point format.
-					// [used for polygon scan-conversion, z-buffering, and such].
-					// 1/z is linear in screen-space.
 					t.v1.invz = (float)1.0 / p1.z;
 					t.v2.invz = (float)1.0 / p2.z;
 					t.v3.invz = (float)1.0 / p3.z;
-					t.v1.zbuf = (int)(t.v1.invz * (float)10000.0);
-					if (t.v1.zbuf > MAX24BIT) t.v1.zbuf = MAX24BIT;
-					if (t.v1.zbuf < 1) t.v1.zbuf = 1;
-					t.v2.zbuf = (int)(t.v2.invz * (float)10000.0);
-					if (t.v2.zbuf > MAX24BIT) t.v2.zbuf = MAX24BIT;
-					if (t.v2.zbuf < 1) t.v2.zbuf = 1;
-					t.v3.zbuf = (int)(t.v3.invz * (float)10000.0);
-					if (t.v3.zbuf > MAX24BIT) t.v3.zbuf = MAX24BIT;
-					if (t.v3.zbuf < 1) t.v3.zbuf = 1;
 
 					drawTriangleWithMaterial( t, p1, p2, p3, light, mat);
 				}
@@ -1140,8 +1002,7 @@ public class render extends Applet implements Runnable
 		Vec3f p3,
 		Vec3f light,
 		Material mat
-		) 
-	{
+	) {
 		int color = 0;
 		int red, green, blue, inten;
 		float fog;
@@ -1167,7 +1028,6 @@ i		else if (mat._lightmodel == Material.PHONG) {
 		
 			PhongTriangle.drawPhongTriangle( t, mat);
 		} 
-		// GOURAUD lighting model, textured or solid color
 		else if (mat._lightmodel == Material.GOURAUD) {
 				
 			if (mat.TEXTURE == true) {
@@ -1399,7 +1259,8 @@ i		else if (mat._lightmodel == Material.PHONG) {
 		}
 	}
 
-    public void drawPointset( Mat4f m, Vector vlist, rMaterial mat)
+
+	public void drawPointset( Mat4f m, Vector vlist, rMaterial mat)
     {
 		Vec3f p = MemMgr.Vec3f();
 		int cx = this.size().width / 2;
@@ -1439,8 +1300,7 @@ i		else if (mat._lightmodel == Material.PHONG) {
 					
 					if (mat._pointstyle == mat.WU) {
 
-						drawWuPoint( v, fixedx, fixedy, mat);
-
+						Sprite.drawWuPoint( _wu_array, v, fixedx, fixedy, mat);
 					} 
 					else if (mat._pointstyle == mat.GAUSSIAN) {
 				
@@ -1493,98 +1353,6 @@ i		else if (mat._lightmodel == Material.PHONG) {
 			}
 		}
 		MemMgr.done( p);
-    }
-
-    public void wuPoint( Vertex v, int xoff, int yoff, rMaterial mat)
-    {
-	//	System.out.println("---------------------------------------");
-	int wuoffset=0, wucolors=0, wu_00=0, wu_01=0, wu_10=0, wu_11=0, wu_red=0, wu_green=0, wu_blue=0;
-	wuoffset = xoff + yoff * 8;
-	int pixel = v.x + v.y * _width;
-	int color, red, green, blue;
-
-	//System.err.println("X: " + v.x + "  Y: " + v.y + "  xoff: " + xoff + "  yoff: " + yoff);
-
-	try {
-	wucolors = _wu_array[wuoffset];
-	} catch (Exception e) {
-	    System.out.println("Problem with _wu_array: " + xoff + " "  + yoff);
-	    e.printStackTrace();
-	}
-
-	wu_00 = (wucolors>>24)&255;
-	wu_01 = (wucolors>>16)&255;
-	wu_10 = (wucolors>>8)&255;
-	wu_11 = (wucolors)&255;
-	wu_red = (mat._color>>16)&255;
-	wu_green = (mat._color>>8)&255;
-	wu_blue = (mat._color)&255;
-
-	//	System.err.println("Before intensity: ");
-	//	System.err.println("wu_00: " + wu_00 + "  wu_01: " + wu_01 + "  wu_10: " + wu_10 + "  wu_11: " + wu_11);
-	//	System.err.println("red: " + wu_red + "  green: " + wu_green + "  blue: " + wu_blue);
-
-	/*
-	float intensity = v.invz;
-	if (intensity<(float)1.0 && intensity>(float)0.0) {
-	    wu_00 = (int)((float)wu_00 * intensity);
-	    wu_01 = (int)((float)wu_01 * intensity);
-	    wu_10 = (int)((float)wu_10 * intensity);
-	    wu_11 = (int)((float)wu_11 * intensity);
-	}
-	*/
-
-	//	System.err.println("After intensity: ");
-	//	System.err.println("wu_00: " + wu_00 + "  wu_01: " + wu_01 + "  wu_10: " + wu_10 + "  wu_11: " + wu_11);
-
-	try {
-
-	if ( v.zbuf > _zbuf[ pixel] && v.x>=0 && v.x<(_width-1) && v.y>=0 && v.y<(_height-1) ) {
-	 
-	    color = _pix[ pixel];
-	    red   = ((color>>16)&255) + ((wu_red  *wu_00)>>8);
-	    green = ((color>> 8)&255) + ((wu_green*wu_00)>>8);
-	    blue  = ((color    )&255) + ((wu_blue *wu_00)>>8);
-	    if (red   > 255) red   = 255;
-	    if (green > 255) green = 255;
-	    if (blue  > 255) blue  = 255;
-
-	    //	    System.err.println("r: " + red + " g: " + green + " b: " + blue);
-	    _pix[pixel] = (255<<24) + (red<<16) + (green<<8) + blue;
-	    
-
-	    color = _pix[ pixel+1];
-	    red   = ((color>>16)&255) + ((wu_red  *wu_01)>>8);
-	    green = ((color>> 8)&255) + ((wu_green*wu_01)>>8);
-	    blue  = ((color    )&255) + ((wu_blue *wu_01)>>8);
-	    if (red   > 255) red   = 255;
-	    if (green > 255) green = 255;
-	    if (blue  > 255) blue  = 255;
-	    _pix[pixel+1] = (255<<24) + (red<<16) + (green<<8) + blue;
-	    
-	    color = _pix[ pixel+_width];
-	    red   = ((color>>16)&255) + ((wu_red  *wu_10)>>8);
-	    green = ((color>> 8)&255) + ((wu_green*wu_10)>>8);
-	    blue  = ((color    )&255) + ((wu_blue *wu_10)>>8);
-	    if (red   > 255) red   = 255;
-	    if (green > 255) green = 255;
-	    if (blue  > 255) blue  = 255;
-	    _pix[pixel+_width] = (255<<24) + (red<<16) + (green<<8) + blue;
-	    
-
-	    color = _pix[ pixel+_width+1];
-	    red   = ((color>>16)&255) + ((wu_red  *wu_11)>>8);
-	    green = ((color>> 8)&255) + ((wu_green*wu_11)>>8);
-	    blue  = ((color    )&255) + ((wu_blue *wu_11)>>8);
-	    if (red   > 255) red   = 255;
-	    if (green > 255) green = 255;
-	    if (blue  > 255) blue  = 255;
-	    _pix[pixel+_width+1] = (255<<24) + (red<<16) + (green<<8) + blue;
-	    
-	}
-	} catch (Exception e) {
-	    System.out.println("Problem plotting wu point: " + v.x + " " + v.y);
-	}
     }
 
     public void drawWireframe( Mat4f m, Vector elist, rMaterial mat)
@@ -1641,6 +1409,5 @@ i		else if (mat._lightmodel == Material.PHONG) {
 		MemMgr.done( p1);
 		MemMgr.done( p2);
     }
-    
 }
 
