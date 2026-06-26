@@ -10,10 +10,16 @@
 
 package com.splandorf.render3d;
 
-import java.applet.*;
+
+import javax.swing.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.awt.*;
-import java.util.*;
 import java.awt.image.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.*;
+
 
 import Vec3f;
 import Vec3i;
@@ -24,8 +30,10 @@ import MemMgr;
 
 public class Render extends JPanel 
 {
-    MemoryImageSource mis = null;
-    Image temp_image = null;
+//    MemoryImageSource mis = null;
+//    Image temp_image = null;
+    BufferedImage _framebuffer_image = null;
+	JFrame _jFrame = null;
 
     int [] _wu_array = null;
 
@@ -36,17 +44,15 @@ public class Render extends JPanel
     int [] _env_map = null;
     int [] _background = null;
 
-    int _width  = -1;
-    int _height = -1;
-    Image _buffer = null;
-    Canvas _canvas = null;
+    static int _width  = 640;
+    int _height = 480;
     int _bgcolor = 0;
     MemMgr _mgr = null;
     Thread _renderThread = null;
     boolean _initialized=false;
+	boolean _running = true;
     double _incr = 0.0;
     int _garbage_counter = 0;
-    static Applet _app = null;
     
     int SUBDIV_SIZE = 16;
     int MAX24BIT = (255<<16) + (255<<8) + 255;
@@ -71,19 +77,16 @@ public class Render extends JPanel
     int _blue_color;
     int [] _blue_blend;
     
-    Obj _cube1 = null;
-    Obj _cube2 = null;
-    Obj _cube3 = null;
-    Obj _cube4 = null;
-    Obj _cube5 = null;
+    Obj _obj1 = null;
+    Obj _obj2 = null;
+    Obj _obj3 = null;
+    Obj _obj4 = null;
+    Obj _obj5 = null;
 
     Mat4f _temp_mat1 = null;
     Mat4f _temp_mat2 = null;
 
     Vector _transpQueue = null;
-    
-    BufferedImage smiley_image = null;
-    BufferedImage rgb_image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
     public static void main(String[] args) throws IOException {
         System.out.print("Render.main( ");
@@ -96,45 +99,32 @@ public class Render extends JPanel
         int h = me.height;
         me.init( w, h);
 
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setSize(w, h);
-        frame.add(me);
-        frame.setVisible(true);
+        me._jFrame = new JFrame();
+        me._jFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        me._jFrame.setSize(w, h);
+        me._jFrame.add(me);
+        me._jFrame.setVisible(true);
 
-        Thread animThread = new Thread() {
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(10);
-                        frame.repaint();
-                    } catch (Exception e) {
-
-                    }
-                }
-            }
-        };
-        animThread.start();
+        _renderThread = new Thread( this);
+		_running = true;
+        _renderThread.start();
 	}
 
 	public Render()
     {
-		_app = this;
+//		_app = this;
     }
     
-
-	 public void init(int w, int h) {
-        _width = w;
-        _height = h;
-	 }
 
 	public void paint(Graphics gx)
 	{
 		System.out.println("Paint.");
-		rgb_image.setRGB(0, 0, _width, _height, _pix, 0, _width);
-        gx.drawImage( rgb_image, 0, 0, null);
+}
+//		_framebuffer_image.setRGB(0, 0, _width, _height, _pix, 0, _width);
+        gx.drawImage( _framebuffer_image, 0, 0, null);
 	}
 
+	/**
 	public void start()
 	{
 		if (_renderThread == null)
@@ -152,24 +142,25 @@ public class Render extends JPanel
 			_renderThread = null;
 		}
 	}
+		*/
 
 	public void run()
 	{
 		long startTime = System.currentTimeMillis();
 		long oldTime = startTime;
 		long newTime = 0;
-		int  framerate = 0;
+		int  printFramerate = 0;
 		
 		System.arraycopy( _background, 0, _pix, 0, _height*_width);
 		System.arraycopy( _maxint_pix, 0, _zbuf, 0, _height*_width);
 		
 		float _time = (float)0.0;
-		int running = 0;
-		while (true) {
+		while (_running) {
 			
 			renderScene( _time);
 			_time += 0.01;
 			
+			_jFrame.repaint();
 			_renderThread.yield();
 			
 			//			try {
@@ -180,27 +171,26 @@ public class Render extends JPanel
 			if (_garbage_counter>=50) {
 				System.gc();
 				_garbage_counter = 0;
-				framerate++;
+				printFramerate++;
 			}
-			if (framerate>=2) {
+			if (printFramerate>=2) {
 				newTime = System.currentTimeMillis();
 				System.err.println("fps: " + (100000 / (newTime-oldTime)) );
 				oldTime = newTime;
-				framerate = 0;
+				printFramerate = 0;
 			}
 		}
 	}
 
 
 	public void init()
-    {
+    {		
 		_scene_root = new Group( "ROOT");
+		_transpQueue = new Vector( 10);
 
 		//parseVRML();
 
-		_width  = this.size().width;
-		_height = this.size().height;
-		
+		/**
 		// Add grid bag layout so we can force the applet
 		// to lay itself out nicely
 		GridBagLayout      gbl = new GridBagLayout();
@@ -220,33 +210,32 @@ public class Render extends JPanel
 		
 		gbl.setConstraints(_canvas, gbc);
 		add(_canvas);
+		*/
 		
 		// Make our front buffer image
-		_buffer = _canvas.createImage( _width, _height);
-		_pix = new int[ _width * _height];
+		_framebuffer_image = new BufferedImage(_width, _height, BufferedImage.TYPE_INT_RGB);
+		// Instead of creating the pixel array in memory, then copying it to the Framebuffer Image,
+		// try fetching the BufferedImages' own underlying int[] pixel array for direct editing.
+		// _pix = new int[ _width * _height];
+		_pix = ((DataBufferByte) _framebuffer_image.getRaster().getDataBuffer()).getData();
+
 		_zbuf = new int[ _width * _height];
 		_zero_pix = new int[ _width * _height];
 		_maxint_pix = new int[ _width * _height];
-		//		_bgcolor = (255<<24) + (255<<16) + (200<<8) + 200;
-		_bgcolor = (255<<24) + (0<<16) + 0;
+		_bgcolor = (255<<24) + (0<<16) + (0<<8) + 0;
 		for (int i=0; i<_width*_height; i++) {
 			_zero_pix[i] = _bgcolor;
 			_maxint_pix[i] = Integer.MAX_VALUE;
 		}
+
+		/** 
 		_red_color = (255<<24) + (250<<16);
 		_red_blend = new int[256];
 		makeBlendArray( _red_color, _bgcolor, _red_blend);
 		_blue_color = (255<<24) + (255<<16) + (255<<8) + (255);
 		_blue_blend = new int[256];
 		makeBlendArray( _blue_color, _bgcolor, _blue_blend);
-		
-		//_env_map = loadTexture("environments/envplane.gif");
-
-		mis = new MemoryImageSource( _width, _height, _pix, 0, _width);
-		mis.setAnimated( true);
-		temp_image = createImage( mis);
-		
-		_transpQueue = new Vector( 10);
+		*/
 
 		_background = loadTexture( "textures/night_sky_background.jpg", null);
 
@@ -270,65 +259,76 @@ public class Render extends JPanel
 			
 			_cam_ctm.orient( _from, _at, _up);
 			
-			_scene_root.render( _cam_ctm.inv_ctm(), Alg.IDENT_MAT, cur_time );
+			_scene_root.render( this, _cam_ctm.inv_ctm(), Alg.IDENT_MAT, cur_time );
 			
 			if (_transpQueue.size() > 0) {
 				renderTranspObjects();
 			}
 			
-			mis.newPixels( 0, 0, _width, _height);
+			// mis.newPixels( 0, 0, _width, _height);
 			
 			// Blit new image to offscreen buffer
-			//_buffer.getGraphics().drawImage( temp_image, 0, 0, this);
+			//_framebuffer_image.getGraphics().drawImage( temp_image, 0, 0, this);
 			
 			// Blit offscreen buffer to _canvas
-			_canvas.getGraphics().drawImage( temp_image, 0, 0, this);
+			//_canvas.getGraphics().drawImage( temp_image, 0, 0, this);
 			
 		} else {
-			initialize();
+			initScene();
 		}
     }
 
     public static int[] loadTexture( String filename, Material mat)
     {
-		// Load the image
-		Image texture_img = null;
-		try {
-			MediaTracker mt = new MediaTracker(_app);
-			texture_img = _app.getImage( _app.getCodeBase(), filename);
-			mt.addImage( texture_img, 0);
-			mt.waitForAll();
-		} catch (InterruptedException e) {
-			System.err.println("Render::loadTexture(): Couldn't load " + filename);
-			e.printStackTrace();
+        InputStream is = null; 
+		BufferedImage textImage = null;
+        
+        try {
+			is = getClass().getResourceAsStream(filename);
+            textImage = ImageIO.read(is);
+            
+        } catch (IOException ex) {
+			System.err.println("Render.loadTexture(): Couldn't load " + filename);
+            ex.printStackTrace();
+            
+        } finally {
+            try {
+                is.close();  
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+		if (textImage == null) {
+			return null;
 		}
+    
 		
 		// Grab pixel array
-		int src_width = texture_img.getWidth( _app);
-		int src_height = texture_img.getHeight( _app);
-		int[] src_pixels = new int[ src_width * src_height];
-		PixelGrabber pg = new PixelGrabber(
-						texture_img, 0, 0, src_width, src_height, src_pixels, 0, src_width
-						);
-		try {
-			pg.grabPixels();
-		} catch (Exception e) {
-			System.err.println("For some incredibly lame reason, R::loadTexture() couldn't grab pixels.");
-			e.printStackTrace();
-		}
+		int src_width = textImage.getWidth();
+		int src_height = textImage.getHeight();
+		int[] src_pixels = (DataBufferByte) textImage.getRaster().getDataBuffer()).getData();
+		boolean hasAlphaChannel = textImage.getAlphaRaster() != null;
 		
-		// Set all pixels whose opacity is <255 to zero.
-		// If a texture pixel is zero, it is treated as
-		// a decal cut-out, and not rendered at all.
-		for (int i=0; i<src_width * src_height; i++) {
-			if ( ((src_pixels[i]>>24)&255) != 255) {
-			src_pixels[i] = 0;
+		if (hasAlphaChannel) {
+			// Set all pixels whose opacity is <255 to zero.
+			// If a texture pixel is zero, it is treated as
+			// a decal cut-out, and not rendered at all.
+			for (int i=0; i<src_width * src_height; i++) {
+				if ( ((src_pixels[i]>>24)&255) != 255) {
+					src_pixels[i] = 0;
+				}
 			}
 		}
-
 		if (mat != null) {
 			mat._sprite_width = src_width;
 			mat._sprite_height = src_height;
+			// We can't just save it as a texture on the material -- we don't know if it's:
+			// - A texture
+			// - A bump map
+			// - An environment map
+			// - A sprite
+// 			mat._texture = src_pixels;
 		}
 		return src_pixels;
     }
@@ -341,10 +341,15 @@ public class Render extends JPanel
 
 		if (height_map.length != 256*256) {
 			System.err.println("Bump maps must be 256x256 pixels!");
-			for (int i=0; i<256*256; i++) bump_map[i] = (127<<8) + 127;
+			// Return dummy bump map with all normals pointing straight out of the surface.
+			for (int i=0; i<256*256; i++) {
+				bump_map[i] = (127<<8) + 127;
+			}
 			return bump_map;
 		}
 
+		// Assume bump map is greyscale -- but keep only the one 8-bit color channel (Blue) for 
+		// height information.  The other two channels (Red and Green) are ignored.
 		for (int i=0; i<256*256; i++) {
 			height_map[i] = (height_map[i])&255;
 		}
@@ -501,8 +506,8 @@ public class Render extends JPanel
 		_at = MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0);
 		_up = MemMgr.Vec3f((float)0.0, (float)100.0, (float)0.0);
 
-		_cube1 = MemMgr.Obj();
-		_cube1.makeCube();
+		_obj1 = MemMgr.Obj();
+		_obj1.makeCube();
 
 
 		_cam_ctm = new Ctm();
@@ -527,7 +532,7 @@ public class Render extends JPanel
 	}
 
 	*/
-	public void initialize()
+	public void initScene()
 	{
 		System.err.println("init.");
 		_mgr = new MemMgr();
@@ -633,8 +638,8 @@ public class Render extends JPanel
 		wu_mat._pointstyle = Material.GAUSSIAN;
 		wu_points.mat = wu_mat;
 		
-		_cube1 = GeometryFactory.makeOpenBox();
-		_cube1.setName( "CUBE1");
+		_obj1 = GeometryFactory.makeOpenBox();
+		_obj1.setName( "CUBE1");
 		Material t1  = MemMgr.Material();
 		t1._lightmodel = Material.TRANSP;
 		t1._color = (255<<24) + (70<<16) + (50<<8) + 0;
@@ -643,10 +648,10 @@ public class Render extends JPanel
 		t1.TRIANGLES = true;
 		t1.ANTIALIAS = true;
 		t1._linestyle = Material.THICK;
-		_cube1.mat = t1;
+		_obj1.mat = t1;
 		
-		_cube4 = GeometryFactory.makeOpenBox();
-		_cube4.setName( "CUBE4");
+		_obj4 = GeometryFactory.makeOpenBox();
+		_obj4.setName( "CUBE4");
 		Material t4 = MemMgr.Material();
 		t4._lightmodel = Material.TRANSP;
 		t4._color = (255<<24) + (0<<16) + (70<<8) + 50;
@@ -655,10 +660,10 @@ public class Render extends JPanel
 		t4.TRIANGLES = true;
 		t4.ANTIALIAS = true;
 		t4._linestyle = Material.THICK;
-		_cube4.mat = t4;
+		_obj4.mat = t4;
 		
-		_cube5 = GeometryFactory.makeOpenBox();
-		_cube5.setName( "CUBE5");
+		_obj5 = GeometryFactory.makeOpenBox();
+		_obj5.setName( "CUBE5");
 		Material t5 = MemMgr.Material();
 		t5._lightmodel = Material.TRANSP;
 		t5._color = (255<<24) + (50<<16) + (0<<8) + 70;
@@ -667,18 +672,18 @@ public class Render extends JPanel
 		t5.TRIANGLES = true;
 		t5.ANTIALIAS = true;
 		t5._linestyle = Material.THICK;
-		_cube5.mat = t5;
+		_obj5.mat = t5;
 				
 		// Metal donut
-		_cube2 = GeometryFactory.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
-		_cube2.setName( "METAL_DONUT");
+		_obj2 = GeometryFactory.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
+		_obj2.setName( "METAL_DONUT");
 	
 		Material texture = MemMgr.Material();
 		texture._lightmodel  = Material.PHONG;
 		texture._color = (255<<24) + (255<<16) + (100<<8) + 255;
 		//		texture.TEXTURE = true;
 		texture.SPEED = Material.FAST;
-		texture._env_map = loadTexture("environments/envplane.gif", texture);
+		texture._env_map = loadTexture("res/environments/envplane.gif", texture);
 		//		texture._env_map = makeLightMap();
 		texture._bump_map = loadBumpMap( "textures/weave_height2.gif", texture);
 		texture._fog_R = 0;
@@ -691,11 +696,11 @@ public class Render extends JPanel
 		texture.ANTIALIAS = true;
 		texture._linestyle = Material.THICK;
 		texture.BUMP = true;
-		_cube2.mat = texture;
+		_obj2.mat = texture;
 		
 		// Sphere
-		_cube3 = GeometryFactory.makeSphere( 7, 13, (float)0.0, (float)2.0, (float)0.0, (float)2.0);
-		_cube3.setName( "SPHERE");
+		_obj3 = GeometryFactory.makeSphere( 7, 13, (float)0.0, (float)2.0, (float)0.0, (float)2.0);
+		_obj3.setName( "SPHERE");
 		texture = MemMgr.Material();
 		texture._lightmodel  = Material.GOURAUD;
 		texture._color = (255<<24) + (255<<16) + (255<<8) + 255;
@@ -716,7 +721,7 @@ public class Render extends JPanel
 		texture._linestyle = Material.THICK;
 		texture.TRIANGLES = true;
 		texture.WIREFRAME = true;
-		_cube3.mat = texture;
+		_obj3.mat = texture;
 
 
 		Obj flare1 = new Obj( "FLARE1");
@@ -725,7 +730,7 @@ public class Render extends JPanel
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "sprites/flare1.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare1.jpg", texture);
 		flare1.ctm().set_trans( (float)0.0, (float)2.7, (float)0.0);
 		flare1.mat = texture;
 		
@@ -735,7 +740,7 @@ public class Render extends JPanel
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "sprites/flare.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare.jpg", texture);
 		flare2.ctm().set_trans( (float)0.0, (float)-2.7, (float)0.0);
 		flare2.mat = texture;
 		
@@ -745,7 +750,7 @@ public class Render extends JPanel
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "sprites/flare3.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
 		flare3.ctm().set_trans( (float)0.0, (float)0.0, (float)2.7);
 		flare3.mat = texture;
 		
@@ -755,7 +760,7 @@ public class Render extends JPanel
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "sprites/flare3.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
 		flare4.ctm().set_trans( (float)0.0, (float)0.0, (float)-2.7);
 		flare4.mat = texture;
 		
@@ -780,49 +785,49 @@ public class Render extends JPanel
 		_scene_root.addChild( rot_root);
 		*/
 		
-		_cube1.ctm().set_scale( (float)1.3, (float)0.5, (float)0.5);
+		_obj1.ctm().set_scale( (float)1.3, (float)0.5, (float)0.5);
 		Anim cube1Anim = new Anim("ANIM1");
 		cube1Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)9.1,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)6.28318, (float)0.0) );
-		cube1Anim.addChild( _cube1);
+		cube1Anim.addChild( _obj1);
 		_scene_root.addChild( cube1Anim);
 		
-		_cube4.ctm().set_scale( (float)0.6, (float)1.75, (float)0.4);
+		_obj4.ctm().set_scale( (float)0.6, (float)1.75, (float)0.4);
 		Anim cube4Anim = new Anim("ANIM4");
 		cube4Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)8.1,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)6.28318, (float)0.0, (float)0.0) );
-		cube4Anim.addChild( _cube4);
+		cube4Anim.addChild( _obj4);
 		_scene_root.addChild( cube4Anim);
 		
-		_cube5.ctm().set_scale( (float)0.5, (float)0.6, (float)1.8);
+		_obj5.ctm().set_scale( (float)0.5, (float)0.6, (float)1.8);
 		Anim cube5Anim = new Anim("ANIM5");
 		cube5Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)7.0,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
-		cube5Anim.addChild( _cube5);
+		cube5Anim.addChild( _obj5);
 		_scene_root.addChild( cube5Anim);
 		
-		_cube2.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
+		_obj2.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
 		Group xform2 = new Group("XFORM2");
 		xform2.ctm().set_trans( (float)-2.9, (float)0.0, (float)0.0);
 		Anim cube2Anim = new Anim("ANIM2");
 		cube2Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)2.8,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
-		cube2Anim.addChild( _cube2);
+		cube2Anim.addChild( _obj2);
 		xform2.addChild( cube2Anim);
 		//	_scene_root.addChild( xform2);
 		
-		_cube3.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
+		_obj3.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
 		Group xform3 = new Group("XFORM3");
 		xform3.ctm().set_trans( (float)2.9, (float)0.0, (float)0.0);
 		Anim cube3Anim = new Anim("ANIM3");
 		cube3Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)3.0,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
-		cube3Anim.addChild( _cube3);
+		cube3Anim.addChild( _obj3);
 		xform3.addChild( cube3Anim);
 		//	_scene_root.addChild( xform3);
 		
@@ -830,7 +835,7 @@ public class Render extends JPanel
 
     }
     
-
+/** 
 	protected void makeBlendArray( int color1, int color2, int [] colors)
 	{
 		
@@ -854,6 +859,7 @@ public class Render extends JPanel
 						(255<<24);
 		}
 	}
+		*/
 
 
 	public void addToTranspQueue( Mat4f xform, Mat4f nxform, Obj obj)
