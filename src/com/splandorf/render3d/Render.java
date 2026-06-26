@@ -216,7 +216,7 @@ public class Render extends JPanel implements Runnable
 		// Instead of creating the pixel array in memory, then copying it to the Framebuffer Image,
 		// try fetching the BufferedImages' own underlying int[] pixel array for direct editing.
 		// _pix = new int[ _width * _height];
-		_pix = ((DataBufferByte) _framebuffer_image.getRaster().getDataBuffer()).getData();
+		_pix = ((DataBufferInt) _framebuffer_image.getRaster().getDataBuffer()).getData();
 
 		_zbuf = new int[ _width * _height];
 		_zero_pix = new int[ _width * _height];
@@ -304,7 +304,7 @@ public class Render extends JPanel implements Runnable
 		// Grab pixel array
 		int src_width = textImage.getWidth();
 		int src_height = textImage.getHeight();
-		int[] src_pixels = ((DataBufferByte) textImage.getRaster().getDataBuffer()).getData();
+		int[] src_pixels = ((DataBufferInt) textImage.getRaster().getDataBuffer()).getData();
 		boolean hasAlphaChannel = textImage.getAlphaRaster() != null;
 		
 		if (hasAlphaChannel) {
