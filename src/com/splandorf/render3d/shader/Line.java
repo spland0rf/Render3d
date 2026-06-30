@@ -485,8 +485,6 @@ public class Line extends Shader
 		int nextpix;
 		int pixel = x + y * _width;
 		
-		
-		
 		// Top two cases: slope >1 or slope <1, but dY+
 		if (dy>0) {
 			

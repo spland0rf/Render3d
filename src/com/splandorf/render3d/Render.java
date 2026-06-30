@@ -114,9 +114,6 @@ public class Render extends JPanel implements Runnable
 
 	public void paint(Graphics gx)
 	{
-		System.out.println("Paint.");
-
-//		_framebuffer_image.setRGB(0, 0, _width, _height, _pix, 0, _width);
         gx.drawImage( _framebuffer_image, 0, 0, null);
 	}
 
@@ -217,11 +214,15 @@ public class Render extends JPanel implements Runnable
 		_zbuf = new int[ _width * _height];
 		_zero_pix = new int[ _width * _height];
 		_maxint_pix = new int[ _width * _height];
-		_bgcolor = (255<<24) + (0<<16) + (0<<8) + 0;
+		_bgcolor = (255<<24) + (0<<16) + (0<<8) + 255;
+
 		for (int i=0; i<_width*_height; i++) {
 			_zero_pix[i] = _bgcolor;
 			_maxint_pix[i] = Integer.MAX_VALUE;
 		}
+
+		Shader.initShader(_width, _height, _pix, _zbuf);
+
 
 		/** 
 		_red_color = (255<<24) + (250<<16);
@@ -232,10 +233,7 @@ public class Render extends JPanel implements Runnable
 		makeBlendArray( _blue_color, _bgcolor, _blue_blend);
 		*/
 
-		_background = loadTexture( "/textures/night_sky_background.jpg", null);
-		if (_background==null) {
-			_background = new int[_width*_height];
-		}
+		_background = loadTexture( "res/textures/night_sky_background.jpg", null, _width, _height);
     }
 
 	public void renderScene( float cur_time)
@@ -247,7 +245,7 @@ public class Render extends JPanel implements Runnable
 			
 			
 			//_incr = 10.0;
-			_incr += 0.01;
+			_incr += 0.0001;
 			_from.z = (float)(Math.sin(_incr) * 3.5);
 			_from.x = (float)(Math.cos(_incr) * 5.5);
 			_from.y = (float) Math.sin(_incr * 5.0) * (float)2.0 + (float)0.0;
@@ -274,17 +272,42 @@ public class Render extends JPanel implements Runnable
 		}
     }
 
-    public int[] loadTexture( String filename, Material mat)
+	public static BufferedImage scaleImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
+        // Create a new target BufferedImage with desired dimensions and original type
+        BufferedImage scaledImage = new BufferedImage(targetWidth, targetHeight, originalImage.getType());
+        
+        // Obtain the Graphics2D context
+        Graphics2D g2d = scaledImage.createGraphics();
+        
+        // Configure high-quality rendering hints
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // Draw the original image scaled into the new dimensions
+        g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
+        
+        // Clean up graphics resources
+        g2d.dispose();
+        
+        return scaledImage;
+    }
+
+	public int[] loadTexture( String filename, Material mat) {
+		return loadTexture( filename, mat, -1, -1);
+	}
+
+    public int[] loadTexture( String filename, Material mat, int targetW, int targetH)
     {
         InputStream is = null; 
-		BufferedImage textImage = null;
+		BufferedImage image = null;
         
         try {
 			if (!filename.startsWith("/")) {
 				filename = "/" + filename;
 			}
 			is = getClass().getResourceAsStream(filename);
-            textImage = ImageIO.read(is);
+            image = ImageIO.read(is);
             
         } catch (Exception ex) {
 			System.err.println("Render.loadTexture(): Couldn't load " + filename);
@@ -298,16 +321,31 @@ public class Render extends JPanel implements Runnable
             }
         }
 
-		if (textImage == null) {
+		if (image == null) {
 			return null;
 		}
     
+		// Ensure the image is using an integer data buffer
+		if (image.getType() != BufferedImage.TYPE_INT_ARGB && 
+    		image.getType() != BufferedImage.TYPE_INT_RGB) {
+    
+			// Convert the image if it is using a byte or short buffer instead
+			BufferedImage converted = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			converted.getGraphics().drawImage(image, 0, 0, null);
+			image = converted;
+		}
 		
+		int src_width = image.getWidth();
+		int src_height = image.getHeight();
+
+		// Scale image IFF targetW & targetH are specified, and the image dimensions don't match them
+		if (targetW != -1 && targetH != -1 && targetW != src_width && targetH != src_height) {
+			image = scaleImage( image, targetW, targetH);
+		}
+
 		// Grab pixel array
-		int src_width = textImage.getWidth();
-		int src_height = textImage.getHeight();
-		int[] src_pixels = ((DataBufferInt) textImage.getRaster().getDataBuffer()).getData();
-		boolean hasAlphaChannel = textImage.getAlphaRaster() != null;
+		int[] src_pixels = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+		boolean hasAlphaChannel = image.getAlphaRaster() != null;
 		
 		if (hasAlphaChannel) {
 			// Set all pixels whose opacity is <255 to zero.
@@ -322,12 +360,6 @@ public class Render extends JPanel implements Runnable
 		if (mat != null) {
 			mat._sprite_width = src_width;
 			mat._sprite_height = src_height;
-			// We can't just save it as a texture on the material -- we don't know if it's:
-			// - A texture
-			// - A bump map
-			// - An environment map
-			// - A sprite
-// 			mat._texture = src_pixels;
 		}
 		return src_pixels;
     }
@@ -677,15 +709,14 @@ public class Render extends JPanel implements Runnable
 		// Metal donut
 		_obj2 = GeometryFactory.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
 		_obj2.setName( "METAL_DONUT");
-	
 		Material texture = MemMgr.Material();
 		texture._lightmodel  = Material.PHONG;
 		texture._color = (255<<24) + (255<<16) + (100<<8) + 255;
 		//		texture.TEXTURE = true;
 		texture.SPEED = Material.FAST;
-		texture._env_map = loadTexture("/environments/envplane.gif", texture);
+		texture._env_map = loadTexture("res/environments/envplane.gif", texture);
 		//		texture._env_map = makeLightMap();
-		texture._bump_map = loadBumpMap( "/textures/weave_height2.gif", texture);
+		texture._bump_map = loadBumpMap( "res/textures/weave_height2.gif", texture);
 		texture._fog_R = 0;
 		texture._fog_G = 0;
 		texture._fog_B = 0;
@@ -730,7 +761,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "/sprites/flare1.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare1.jpg", texture);
 		flare1.ctm().set_trans( (float)0.0, (float)2.7, (float)0.0);
 		flare1.mat = texture;
 		
@@ -740,7 +771,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "/sprites/flare.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare.jpg", texture);
 		flare2.ctm().set_trans( (float)0.0, (float)-2.7, (float)0.0);
 		flare2.mat = texture;
 		
@@ -750,7 +781,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "/sprites/flare3.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
 		flare3.ctm().set_trans( (float)0.0, (float)0.0, (float)2.7);
 		flare3.mat = texture;
 		
@@ -760,7 +791,7 @@ public class Render extends JPanel implements Runnable
 		texture.TRIANGLES = false;
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
-		texture._texture = loadTexture( "/sprites/flare3.jpg", texture);
+		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
 		flare4.ctm().set_trans( (float)0.0, (float)0.0, (float)-2.7);
 		flare4.mat = texture;
 		
