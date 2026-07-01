@@ -124,7 +124,7 @@ public class Render extends JPanel implements Runnable
 				System.err.println ("Render.run(): can't synchronize on _framebuffer_image");
 				e.printStackTrace();
 			}
-			_time += 0.0001;
+			_time += 0.002;
 			
 			_jFrame.repaint();
 			Thread.yield();
@@ -809,7 +809,7 @@ public class Render extends JPanel implements Runnable
 		*/
 		Triangle t   = null;
 		Material mat = null;
-		
+
 		for (int i=0; i<tlist.size(); i++) {
 			
 			// Find triangle normal
@@ -893,9 +893,9 @@ public class Render extends JPanel implements Runnable
 					// Calculate 1/z and store in 16-bit fixed-point format.
 					// [used for polygon scan-conversion, z-buffering, and such].
 					// 1/z is linear in screen-space.
-					t.v1.invz = (float)1.0 / p1.z;
-					t.v2.invz = (float)1.0 / p2.z;
-					t.v3.invz = (float)1.0 / p3.z;
+					t.v1.invz = (float)1.0 / (float)p1.z;
+					t.v2.invz = (float)1.0 / (float)p2.z;
+					t.v3.invz = (float)1.0 / (float)p3.z;
 					t.v1.zbuf = (int)(t.v1.invz * (float)10000.0);
 					if (t.v1.zbuf > MAX24BIT) {
 						t.v1.zbuf = MAX24BIT;
@@ -917,7 +917,10 @@ public class Render extends JPanel implements Runnable
 					if (t.v3.zbuf < 1) {
 						t.v3.zbuf = 1;
 					}
-		    		    
+
+					if (i%20==0) {
+//						System.out.println( "p.z: " + p1.z + ", t.z: " + t.v1.z + ", t.inv_z: " + t.v1.invz + ", t.zbuf: " + t.v1.zbuf);
+					}	    		    
 					Shader.drawTriangleWithMaterial( t, p1, p2, p3, light, _lights, mat);
 				}
 			}	
