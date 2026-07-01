@@ -61,7 +61,7 @@ public class Obj extends Node
 			if (mat._lightmodel == Material.FLARE) {
 				rend.addToTranspQueue( my_xform, my_n_xform, this);
 			} else if (mat._lightmodel == Material.SPRITE) {
-				Particle.drawParticle( my_xform, this);
+				Shader.drawParticle( my_xform, this);
 			}
 		} else {
 			if ( mat.TRIANGLES == true) {
@@ -72,10 +72,10 @@ public class Obj extends Node
 				}
 			}
 			if ( mat.WIREFRAME == true) {
-				rend.drawWireframe( my_xform, elist, mat);
+				Shader.drawWireframe( my_xform, elist, mat);
 			}
 			if ( mat.POINTSET == true) {
-				rend.drawPointset( my_xform, vlist, mat);
+				Shader.drawPointset( my_xform, vlist, mat);
 			}
 		}
 		

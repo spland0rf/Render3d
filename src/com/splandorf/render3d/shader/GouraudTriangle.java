@@ -30,8 +30,8 @@ public class GouraudTriangle extends Shader
 
 		int lx = v1.x<<16;
 		int rx = v1.x<<16;
-		int lz = v1.z;
-		int rz = v1.z;
+		int lz = v1.zbuf;
+		int rz = v1.zbuf;
 		int lr = v1.r;
 		int lg = v1.g;
 		int lb = v1.b;
@@ -48,21 +48,21 @@ public class GouraudTriangle extends Shader
 		int db_1_2=0, db_1_3=0, db_2_3=0;
 		if (dy_1_2 != 0) {
 			dx_1_2 = ((v2.x<<16)-(v1.x<<16)) / dy_1_2;
-			dz_1_2 = (v2.z-v1.z) / dy_1_2;
+			dz_1_2 = (v2.zbuf-v1.zbuf) / dy_1_2;
 			dr_1_2 = (v2.r-v1.r) / dy_1_2;
 			dg_1_2 = (v2.g-v1.g) / dy_1_2;
 			db_1_2 = (v2.b-v1.b) / dy_1_2;
 		}
 		if (dy_1_3 != 0) {
 			dx_1_3 = ((v3.x<<16)-(v1.x<<16)) / dy_1_3;
-			dz_1_3 = (v3.z-v1.z) / dy_1_3;
+			dz_1_3 = (v3.zbuf-v1.zbuf) / dy_1_3;
 			dr_1_3 = (v3.r-v1.r) / dy_1_3;
 			dg_1_3 = (v3.g-v1.g) / dy_1_3;
 			db_1_3 = (v3.b-v1.b) / dy_1_3;
 		}
 		if (dy_2_3 != 0) {
 			dx_2_3 = ((v3.x<<16)-(v2.x<<16)) / dy_2_3;
-			dz_2_3 = (v3.z-v2.z) / dy_2_3;
+			dz_2_3 = (v3.zbuf-v2.zbuf) / dy_2_3;
 			dr_2_3 = (v3.r-v2.r) / dy_2_3;
 			dg_2_3 = (v3.g-v2.g) / dy_2_3;
 			db_2_3 = (v3.b-v2.b) / dy_2_3;
@@ -93,7 +93,7 @@ public class GouraudTriangle extends Shader
 		// This way, bottom half will *be* the whole, correct
 		// triangle in this special case.
 		rx = v2.x<<16;
-		rz = v2.z;
+		rz = v2.zbuf;
 		rr = v2.r;
 		rg = v2.g;
 		rb = v2.b;
@@ -164,7 +164,9 @@ public class GouraudTriangle extends Shader
 		}
 
 		// Clipping against sides of screen;
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			r += -lx * dr;
@@ -176,7 +178,7 @@ public class GouraudTriangle extends Shader
 		// Render the puppy
 		for (int i=lx; i<rx; i++) {
 			if (i>=0 && i<_width) {
-				if ( z < _zbuf[ pixel ] ) {
+				if ( z > _zbuf[ pixel ] ) {
 					if (mat.TRANSPARENT) {
 						tcol = _pix [ pixel ];
 						_pix [ pixel ] =
@@ -237,8 +239,8 @@ public class GouraudTriangle extends Shader
 
 		int lx = v1.x<<16;
 		int rx = v1.x<<16;
-		float lz = v1.invz;
-		float rz = v1.invz;
+		float lz = v1.zbuf;
+		float rz = v1.zbuf;
 		float ls = v1.invs;
 		float rs = v1.invs;
 		float lt = v1.invt;
@@ -261,7 +263,7 @@ public class GouraudTriangle extends Shader
 		float dt_1_2=0, dt_1_3=0, dt_2_3=0;
 		if (dy_1_2 != 0) {
 			dx_1_2 = ((v2.x<<16)-(v1.x<<16)) / dy_1_2;
-			dz_1_2 = (v2.invz-v1.invz) / (float)dy_1_2;
+			dz_1_2 = (v2.zbuf-v1.zbuf) / (float)dy_1_2;
 			ds_1_2 = (v2.invs-v1.invs) / (float)dy_1_2;
 			dt_1_2 = (v2.invt-v1.invt) / (float)dy_1_2;
 			dr_1_2 = (v2.r-v1.r) / dy_1_2;
@@ -270,7 +272,7 @@ public class GouraudTriangle extends Shader
 		}
 		if (dy_1_3 != 0) {
 			dx_1_3 = ((v3.x<<16)-(v1.x<<16)) / dy_1_3;
-			dz_1_3 = (v3.invz-v1.invz) / (float)dy_1_3;
+			dz_1_3 = (v3.zbuf-v1.zbuf) / (float)dy_1_3;
 			ds_1_3 = (v3.invs-v1.invs) / (float)dy_1_3;
 			dt_1_3 = (v3.invt-v1.invt) / (float)dy_1_3;
 			dr_1_3 = (v3.r-v1.r) / dy_1_3;
@@ -279,7 +281,7 @@ public class GouraudTriangle extends Shader
 		}
 		if (dy_2_3 != 0) {
 			dx_2_3 = ((v3.x<<16)-(v2.x<<16)) / dy_2_3;
-			dz_2_3 = (v3.invz-v2.invz) / (float)dy_2_3;
+			dz_2_3 = (v3.zbuf-v2.zbuf) / (float)dy_2_3;
 			ds_2_3 = (v3.invs-v2.invs) / (float)dy_2_3;
 			dt_2_3 = (v3.invt-v2.invt) / (float)dy_2_3;
 			dr_2_3 = (v3.r-v2.r) / dy_2_3;
@@ -320,7 +322,7 @@ public class GouraudTriangle extends Shader
 		// This way, bottom half will *be* the whole, correct
 		// triangle in this special case.
 		rx = v2.x<<16;
-		rz = v2.invz;
+		rz = v2.zbuf;
 		rs = v2.invs;
 		rt = v2.invt;
 		rr = v2.r;
@@ -421,7 +423,9 @@ public class GouraudTriangle extends Shader
 		float zinv = (float)0.0;
 
 		// Clip against sides of screen
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			s += -lx * ds;

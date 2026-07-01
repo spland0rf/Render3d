@@ -25,7 +25,8 @@ public class Vertex
     // linearly in screen space (as we walk pixels).  (10000.0/z) should
     // be accurate roughly in the z range [0.001, 100], and some errors
     // will appear in distant objects (100<z<1000).  Everything beyond
-    // z=1000 will be rife with error.  But that's okay.
+    // z=1000 will be rife with error.  But that's okay.  We don't expect
+    // to have scenes that go out past 1000 z.
     public float invz;
     public float invs;
     public float invt;

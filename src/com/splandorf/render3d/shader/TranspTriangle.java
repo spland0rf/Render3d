@@ -115,7 +115,9 @@ public class TranspTriangle extends Shader {
 		}
 		
 		// Clipping against sides of screen;
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			lx = 0;

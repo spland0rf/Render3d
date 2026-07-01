@@ -33,17 +33,26 @@ public class Line extends Shader
 			e.v2.x = cx + (int)(p2.x / p2.z * xm);
 			e.v1.y = cy + (int)(p1.y / p1.z * ym);
 			e.v2.y = cy + (int)(p2.y / p2.z * ym);
-			//			e.v1.z = (int)( (p1.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
-			//			e.v2.z = (int)( (p2.z/(float)1000.0)*(float)(Integer.MAX_VALUE) );
-			e.v1.invz = (float)1.05 / p1.z;
-			e.v2.invz = (float)1.05 / p2.z;
+			// Why 1.05/z instead of 1.0/z? To make it easier to draw a wireframe
+			// directly "on top of" (outside of) a set of triangles when both
+			// TRIANGLE shading and WIREFRAME shading are set to true on the 
+			// same Obj.
+			e.v1.invz = (float)1.03 / p1.z;
+			e.v2.invz = (float)1.03 / p2.z;
 			e.v1.zbuf = (int)(e.v1.invz * (float)10000.0);
-			if (e.v1.zbuf > Render.MAX24BIT) e.v1.zbuf = Render.MAX24BIT;
-			if (e.v1.zbuf < 1) e.v1.zbuf = 1;
 			e.v2.zbuf = (int)(e.v2.invz * (float)10000.0);
-			if (e.v2.zbuf > Render.MAX24BIT) e.v2.zbuf = Render.MAX24BIT;
-			if (e.v2.zbuf < 1) e.v2.zbuf = 1;
-			
+			if (e.v1.zbuf > Render.MAX24BIT) {
+				e.v1.zbuf = Render.MAX24BIT;
+			}
+			if (e.v1.zbuf < 1) {
+				e.v1.zbuf = 1;
+			}
+			if (e.v2.zbuf > Render.MAX24BIT) {
+				e.v2.zbuf = Render.MAX24BIT;
+			}
+			if (e.v2.zbuf < 1) {
+				e.v2.zbuf = 1;
+			}
 			if (mat._linestyle == Material.THICK) {
 				float thick = p1.z;
 				if (thick < 2.0) {
@@ -254,47 +263,47 @@ public class Line extends Shader
 			
 			// Upper right quarter, slope >1
 			if (dy > dx) {
-			
-			dz /= dy;
+				
+				dz /= dy;
 
-			dx = dx * 65536 / dy;
-			dy = 65536;
+				dx = dx * 65536 / dy;
+				dy = 65536;
 
-			while (y<=v2.y) {
-				if (x>=2 && x<_width-2 && y>=2 && y<_height-2) {
-					if ( z > _zbuf[ pixel ] ) {
-						try {
-							contrib = 255 - (incrementor>>8);
-							pcol = _pix [ pixel ];
-							// Blend line color with background color by ratio (contrib/255)
-							r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
-							g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
-							b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
-							_pix [ pixel ] = (255<<24) + (r<<16) + (g<<8) + b;
+				while (y<=v2.y) {
+					if (x>=2 && x<_width-2 && y>=2 && y<_height-2) {
+						if ( z > _zbuf[ pixel ] ) {
+							try {
+								contrib = 255 - (incrementor>>8);
+								pcol = _pix [ pixel ];
+								// Blend line color with background color by ratio (contrib/255)
+								r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
+								g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
+								b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
+								_pix [ pixel ] = (255<<24) + (r<<16) + (g<<8) + b;
 
-							contrib = 255 - contrib;
-							pcol = _pix [ pixel +1];
-							// Blend line color with background color by ratio (contrib/255)
-							r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
-							g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
-							b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
-							_pix [ pixel +1] = (255<<24) + (r<<16) + (g<<8) + b;
-						} catch (Exception j) {
-							System.err.println("1: " + x + " " + y + " " + pixel);
+								contrib = 255 - contrib;
+								pcol = _pix [ pixel +1];
+								// Blend line color with background color by ratio (contrib/255)
+								r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
+								g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
+								b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
+								_pix [ pixel +1] = (255<<24) + (r<<16) + (g<<8) + b;
+							} catch (Exception j) {
+								System.err.println("1: " + x + " " + y + " " + pixel);
+							}
 						}
 					}
+					y++;
+					z += dz;
+					pixel += _width;
+					incrementor += dx;
+					if (incrementor >= dy) {
+						incrementor -= dy;
+						pixel++;
+						x++;
+					}
 				}
-				y++;
-				z += dz;
-				pixel += _width;
-				incrementor += dx;
-				if (incrementor >= dy) {
-					incrementor -= dy;
-					pixel++;
-					x++;
-				}
-			}
-			
+				
 			// Upper right quarter, slope <1
 			} else {
 			
@@ -455,7 +464,9 @@ public class Line extends Shader
 		int dy = v2.y - v1.y;
 		int dz = v2.zbuf - v1.zbuf;
 		
-		if (dx == 0 && dy == 0) return;
+		if (dx == 0 && dy == 0) {
+			return;
+		}
 		
 		// Calculate the amount of pixel intensity
 		// we need to increase by as a function of
@@ -478,7 +489,6 @@ public class Line extends Shader
 		}
 		hypot = Math.sqrt( hypot*hypot + (float)1.0);
 		int thickness = (int)((float)255.0 * thick * hypot);
-		//int adj = thickness / 512;
 		int adj = (thickness)/512;
 		//System.err.print(adj + " " );
 		//adj = 0;
@@ -502,7 +512,7 @@ public class Line extends Shader
 				
 				while (y<=v2.y) {
 					if (x>=4 && x<_width-4 && y>=4 && y<_height-4) {
-						if ( z > _zbuf[ pixel ] ) {
+						if ( z >= _zbuf[ pixel ] ) {
 							contrib = 255-(incrementor>>8);
 							rem = thickness;
 							nextpix = 0;
@@ -532,119 +542,119 @@ public class Line extends Shader
 					pixel += _width;
 					incrementor += dx;
 					if (incrementor >= dy) {
-					incrementor -= dy;
-					pixel++;
-					x++;
-					}
-				}
-				
-				// Upper right quarter, slope <1
-				} else {
-				
-					pixel -= adj * _width;
-					
-					dz /= dx;
-					int bigint = 65536 / dx;
-					dx *= bigint;
-					dy *= bigint;
-					int contrib;
-					int rem;
-					
-					while (x<=v2.x) {
-						if (x>=4 && x<_width-4 && y>=4 && y<_height-4) {
-							if ( z > _zbuf[ pixel ] ) {
-								contrib = 255-(incrementor>>8);
-								rem = thickness;
-								nextpix = 0;
-								while (contrib > 0) {
-									rem -= contrib;
-									if (contrib < 255) {
-										pcol = _pix [ pixel  + nextpix];
-										// Blend line color with background color by ratio (contrib/255)
-										r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
-										g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
-										b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
-										_pix [ pixel + nextpix ] = (255<<24) + (r<<16) + (g<<8) + b;
-									} else {
-										_pix [ pixel + nextpix ] = color;
-									}
-									//_zbuf[ pixel + nextpix ] = z;
-									contrib = rem;
-									if (contrib > 255) {
-										contrib = 255;
-									}
-									nextpix += _width;
-								}
-							}
-						}
-						x++;
-						z += dz;
+						incrementor -= dy;
 						pixel++;
-						incrementor += dy;
-						if (incrementor >= dx) {
-							incrementor -= dx;
-							y++;
-							pixel += _width;
-						}
+						x++;
 					}
 				}
 				
-				// Bottom two cases: slope >-1 or slope <-1, but dY-
+			// Upper right quarter, slope <1
 			} else {
+			
+				pixel -= adj * _width;
 				
-				// Lower right quarter, slope <-1
-				if (dx < -dy) {
+				dz /= dx;
+				int bigint = 65536 / dx;
+				dx *= bigint;
+				dy *= bigint;
+				int contrib;
+				int rem;
 				
-					pixel -= adj;
-					
-					dz /= -dy;
-					int bigint = 65536 / -dy;
-					dx *= bigint;
-					dy *= bigint;
-					int contrib;
-					int rem;
-					
-					while (y>=v2.y) {
-						if (x>=4 && x<_width-4 && y>=4 && y<_height-4) {
-							if ( z > _zbuf[ pixel ] ) {
-								contrib = 255-(incrementor>>8);
-								rem = thickness;
-								nextpix = 0;
-								while (contrib > 0) {
-									rem -= contrib;
-									if (contrib < 255) {
-										pcol = _pix [ pixel  + nextpix];
-										// Blend line color with background color by ratio (contrib/255)
-										r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
-										g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
-										b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
-										_pix [ pixel + nextpix ] = (255<<24) + (r<<16) + (g<<8) + b;
-									} else {
-										_pix [ pixel + nextpix ] = color;
-									}
-									//_zbuf[ pixel + nextpix ] = z;
-									contrib = rem;
-									if (contrib > 255) {
-										contrib = 255;
-									}
-									nextpix += 1;
+				while (x<=v2.x) {
+					if (x>=4 && x<_width-4 && y>=4 && y<_height-4) {
+						if ( z > _zbuf[ pixel ] ) {
+							contrib = 255-(incrementor>>8);
+							rem = thickness;
+							nextpix = 0;
+							while (contrib > 0) {
+								rem -= contrib;
+								if (contrib < 255) {
+									pcol = _pix [ pixel  + nextpix];
+									// Blend line color with background color by ratio (contrib/255)
+									r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
+									g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
+									b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
+									_pix [ pixel + nextpix ] = (255<<24) + (r<<16) + (g<<8) + b;
+								} else {
+									_pix [ pixel + nextpix ] = color;
 								}
+								//_zbuf[ pixel + nextpix ] = z;
+								contrib = rem;
+								if (contrib > 255) {
+									contrib = 255;
+								}
+								nextpix += _width;
 							}
 						}
-						y--;
-						z += dz;
-						pixel -= _width;
-						incrementor += dx;
-						if (incrementor >= -dy) {
-							incrementor -= -dy;
-							x++;
-							pixel++;
+					}
+					x++;
+					z += dz;
+					pixel++;
+					incrementor += dy;
+					if (incrementor >= dx) {
+						incrementor -= dx;
+						y++;
+						pixel += _width;
+					}
+				}
+			}
+			
+			// Bottom two cases: slope >-1 or slope <-1, but dY-
+		} else {
+			
+			// Lower right quarter, slope <-1
+			if (dx < -dy) {
+			
+				pixel -= adj;
+				
+				dz /= -dy;
+				int bigint = 65536 / -dy;
+				dx *= bigint;
+				dy *= bigint;
+				int contrib;
+				int rem;
+				
+				while (y>=v2.y) {
+					if (x>=4 && x<_width-4 && y>=4 && y<_height-4) {
+						if ( z > _zbuf[ pixel ] ) {
+							contrib = 255-(incrementor>>8);
+							rem = thickness;
+							nextpix = 0;
+							while (contrib > 0) {
+								rem -= contrib;
+								if (contrib < 255) {
+									pcol = _pix [ pixel  + nextpix];
+									// Blend line color with background color by ratio (contrib/255)
+									r = ( red   * contrib + ((pcol>>16)&255) * (255-contrib)) >> 8;
+									g = ( green * contrib + ((pcol>>8 )&255) * (255-contrib)) >> 8;
+									b = ( blue  * contrib + ( pcol     &255) * (255-contrib)) >> 8;
+									_pix [ pixel + nextpix ] = (255<<24) + (r<<16) + (g<<8) + b;
+								} else {
+									_pix [ pixel + nextpix ] = color;
+								}
+								//_zbuf[ pixel + nextpix ] = z;
+								contrib = rem;
+								if (contrib > 255) {
+									contrib = 255;
+								}
+								nextpix += 1;
+							}
 						}
 					}
-				
-				// Lower right quarter, slope >-1
-				} else {
-				
+					y--;
+					z += dz;
+					pixel -= _width;
+					incrementor += dx;
+					if (incrementor >= -dy) {
+						incrementor -= -dy;
+						x++;
+						pixel++;
+					}
+				}
+			
+			// Lower right quarter, slope >-1
+			} else {
+			
 				pixel += adj * _width;
 				
 				dz /= dx;
@@ -680,7 +690,7 @@ public class Line extends Shader
 								nextpix -= _width;
 							}
 						}
-					}
+					}	
 					x++;
 					z += dz;
 					pixel++;

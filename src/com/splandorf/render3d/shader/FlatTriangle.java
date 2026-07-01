@@ -188,7 +188,7 @@ public class FlatTriangle extends Shader {
 				zinv = (float)1.0/z;
 				zint = (int)( (zinv/(float)1000.0)*(float)(Integer.MAX_VALUE) );
 
-				if ( zint < _zbuf[ pixel ] ) {
+				if ( zint > _zbuf[ pixel ] ) {
 					texel = mat._texture[ ((int)(s*zinv*128.0))%128 + (((int)(t*zinv*128.0))%128)*128 ];
 					if (texel!=0) {
 						r = (((texel>>16)&255) * r_i)>>8;
@@ -261,7 +261,9 @@ public class FlatTriangle extends Shader {
 		int texel = 0;
 
 		// Clip against sides of screen
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			s += -lx * ds;
@@ -318,7 +320,7 @@ public class FlatTriangle extends Shader {
 
 			for (int i=0; i<Render.SUBDIV_SIZE; i++) {
 
-				if ( zi < _zbuf[ pixel ] ) {
+				if ( zi > _zbuf[ pixel ] ) {
 					texel = mat._texture[ (si>>9)%128 + ((ti>>9)%128)*128 ];
 					if (texel!=0) {
 						r = (((texel>>16)&255) * r_i)>>8;
@@ -367,7 +369,7 @@ public class FlatTriangle extends Shader {
 			
 			for (int i=0; i<remainder; i++) {
 
-				if ( zi < _zbuf[ pixel ] ) {
+				if ( zi > _zbuf[ pixel ] ) {
 					texel = mat._texture[ (si>>9)%128 + ((ti>>9)%128)*128 ];	
 					if (texel!=0) {
 						r = (((texel>>16)&255) * r_i)>>8;
@@ -553,7 +555,9 @@ public class FlatTriangle extends Shader {
 //		int zint = 0;
 
 		// Clip against sides of screen
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			s += -lx * ds;
@@ -565,7 +569,7 @@ public class FlatTriangle extends Shader {
 		for (int i=lx; i<rx; i++) {
 			if (i>=0 && i<_width) {
 
-				if ( z < _zbuf[ pixel ] ) {
+				if ( z > _zbuf[ pixel ] ) {
 					texel = mat._texture[ (s>>9)%128 + ((t>>9)%128)*128 ];
 					if (texel!=0) {
 						r = (((texel>>16)&255) * r_i)>>8;

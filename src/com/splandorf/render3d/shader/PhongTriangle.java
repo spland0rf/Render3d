@@ -167,7 +167,7 @@ public class PhongTriangle extends Shader
 		int pixel = lx + y * _width;
 		for (int i=lx; i<rx; i++) {
 			if (i>=0 && i<_width) {
-				if ( z < _zbuf[ pixel ] ) {
+				if ( z > _zbuf[ pixel ] ) {
 
 //					if (mat.TRANSPARENT) {
 //						tcol = _pix[ pixel];

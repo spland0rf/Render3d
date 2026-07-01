@@ -32,7 +32,7 @@ public class Render extends JPanel implements Runnable
 
     int [] _pix = null;
     int [] _zbuf = null;
-    int [] _zero_pix = null;
+    int [] _zbuf_maxfar_pix = null;
     int [] _maxint_pix = null;
 //    int [] _env_map = null;
     int [] _background = null;
@@ -50,6 +50,7 @@ public class Render extends JPanel implements Runnable
     
     public static int SUBDIV_SIZE = 16;
     public static int MAX24BIT = (255<<16) + (255<<8) + 255;
+	public static int ZBUF_MAX_FAR = 0;
 
     Group _scene_root = null;
 
@@ -65,14 +66,6 @@ public class Render extends JPanel implements Runnable
     float _amb_green = (float)0.0;
     float _amb_blue  = (float)0.0;
     
-    // Temporaries for testing:
-	/* 
-    int [] _red_blend;
-    int _red_color;
-    int _blue_color;
-    int [] _blue_blend;
-    */
-
     Obj _obj1 = null;
     Obj _obj2 = null;
     Obj _obj3 = null;
@@ -108,70 +101,58 @@ public class Render extends JPanel implements Runnable
 
 	public Render()
     {
-//		_app = this;
     }
     
-
-	public void paint(Graphics gx)
-	{
-        gx.drawImage( _framebuffer_image, 0, 0, null);
-	}
-
-	/**
-	public void start()
-	{
-		if (_renderThread == null)
-		{
-			_renderThread = new Thread(this);
-			_renderThread.;
-		}
-	}
-	
-	public void stop()
-	{
-		if (_renderThread != null)
-		{
-			_renderThread.stop();
-			_renderThread = null;
-		}
-	}
-		*/
 
 	public void run()
 	{
 		long startTime = System.currentTimeMillis();
 		long oldTime = startTime;
 		long newTime = 0;
-		int  printFramerate = 0;
-		
-		System.arraycopy( _background, 0, _pix, 0, _height*_width);
-		System.arraycopy( _maxint_pix, 0, _zbuf, 0, _height*_width);
-		
+		int  printFramerate = 0;		
 		float _time = (float)0.0;
+
 		while (_running) {
-			
-			renderScene( _time);
-			_time += 0.01;
+			try {
+				// Synchronize on Framebuffer to make sure app doesn't try to render the image 
+				// while we're in the middle of drawing it.
+				synchronized ( _framebuffer_image) {
+					// Render the scene.
+					renderScene( _time);
+				}
+			} catch (Exception e) {
+				System.err.println ("Render.run(): can't synchronize on _framebuffer_image");
+				e.printStackTrace();
+			}
+			_time += 0.0001;
 			
 			_jFrame.repaint();
 			Thread.yield();
 			
-			//			try {
-			//			    _renderThread.sleep(2000);
-			//			} catch (Exception e) {}
-			
 			_garbage_counter++;
-			if (_garbage_counter>=50) {
+			if (_garbage_counter>=500) {
 				System.gc();
 				_garbage_counter = 0;
 				printFramerate++;
 			}
 			if (printFramerate>=2) {
 				newTime = System.currentTimeMillis();
-				System.err.println("fps: " + (100000 / (newTime-oldTime)) );
+				System.err.println("fps: " + (1000*2*500 / (newTime-oldTime)) );
 				oldTime = newTime;
 				printFramerate = 0;
 			}
+		}
+	}
+
+	public void paint(Graphics gx)
+	{
+		try {
+			synchronized ( _framebuffer_image) {
+				gx.drawImage( _framebuffer_image, 0, 0, null);
+			}
+		} catch (Exception e) {
+			System.err.println ("Render.run(): can't synchronize on _framebuffer_image");
+			e.printStackTrace();
 		}
 	}
 
@@ -179,30 +160,6 @@ public class Render extends JPanel implements Runnable
 	public void init()
     {		
 		_scene_root = new Group( "ROOT");
-
-		//parseVRML();
-
-		/**
-		// Add grid bag layout so we can force the applet
-		// to lay itself out nicely
-		GridBagLayout      gbl = new GridBagLayout();
-		GridBagConstraints gbc = new GridBagConstraints();
-		setLayout( gbl);
-		gbc.ipadx  = 0;
-		gbc.ipady  = 0;
-		gbc.gridx  = 0;
-		gbc.gridy  = 0;
-		gbc.insets = new Insets(0,0,0,0);
-		gbc.fill   = GridBagConstraints.BOTH;
-		gbc.anchor = GridBagConstraints.NORTHWEST;
-		
-		_canvas = new Canvas();
-		_canvas.resize( _width, _height);
-		_canvas.setBackground( java.awt.Color.white);
-		
-		gbl.setConstraints(_canvas, gbc);
-		add(_canvas);
-		*/
 		
 		// Make our front buffer image
 		_framebuffer_image = new BufferedImage(_width, _height, BufferedImage.TYPE_INT_RGB);
@@ -212,26 +169,16 @@ public class Render extends JPanel implements Runnable
 		_pix = ((DataBufferInt) _framebuffer_image.getRaster().getDataBuffer()).getData();
 
 		_zbuf = new int[ _width * _height];
-		_zero_pix = new int[ _width * _height];
+		_zbuf_maxfar_pix = new int[ _width * _height];
 		_maxint_pix = new int[ _width * _height];
-		_bgcolor = (255<<24) + (0<<16) + (0<<8) + 255;
+		_bgcolor = (255<<24) + (0<<16) + (0<<8) + 0;
 
 		for (int i=0; i<_width*_height; i++) {
-			_zero_pix[i] = _bgcolor;
+			_zbuf_maxfar_pix[i] = ZBUF_MAX_FAR;
 			_maxint_pix[i] = Integer.MAX_VALUE;
 		}
 
-		Shader.initShader(_width, _height, _pix, _zbuf);
-
-
-		/** 
-		_red_color = (255<<24) + (250<<16);
-		_red_blend = new int[256];
-		makeBlendArray( _red_color, _bgcolor, _red_blend);
-		_blue_color = (255<<24) + (255<<16) + (255<<8) + (255);
-		_blue_blend = new int[256];
-		makeBlendArray( _blue_color, _bgcolor, _blue_blend);
-		*/
+		Shader.initShader( _width, _height, _pix, _zbuf, _zoom);
 
 		_background = loadTexture( "res/textures/night_sky_background.jpg", null, _width, _height);
     }
@@ -241,8 +188,7 @@ public class Render extends JPanel implements Runnable
 		if (_initialized) {
 			
 			System.arraycopy( _background, 0, _pix, 0, _height*_width);
-			System.arraycopy( _zero_pix, 0, _zbuf, 0, _height*_width);
-			
+			System.arraycopy( _zbuf_maxfar_pix, 0, _zbuf, 0, _height*_width);
 			
 			//_incr = 10.0;
 			_incr += 0.0001;
@@ -421,7 +367,7 @@ public class Render extends JPanel implements Runnable
     }
 
     
-    public void addLight( com.splandorf.render3d.scene.Light l)
+    public void addLight( Light l)
     {
 		VecSf s_dir = MemMgr.VecSf();
 		Alg.cart2sphere( l.dir, s_dir);
@@ -472,100 +418,10 @@ public class Render extends JPanel implements Runnable
 		return map;
 	}
 
-/*
- * Old initialize.  Keep around for funsies.
- * 
-	public void initialize()
-	{
-		_mgr = new MemMgr();
-		System.err.println("init.");
-		Alg.initTrig();
-
-		// Initialize lights, ambient and directional.
-		_amb_red   = (float)0.3;
-		_amb_green = (float)0.2;
-		_amb_blue  = (float)0.2;
-		_lights = new ArrayList(10);
-
-		// Light #1
-		Light fresh_light = MemMgr.Light();
-		Vec3f light_vec = MemMgr.Vec3f( (float)0.0, (float)-1.0, (float)-1.0);
-		Alg.normalize( light_vec);
-		fresh_light.dir = light_vec;
-		fresh_light.red   = (float)1.0;
-		fresh_light.green = (float)0.0;
-		fresh_light.blue  = (float)0.0;
-		fresh_light.intensity = (float)1.0;
-		addLight( fresh_light);
-
-		// Light #2
-		fresh_light = MemMgr.Light();
-		light_vec = MemMgr.Vec3f( (float)0.0, (float)-1.0, (float)1.0);
-		Alg.normalize( light_vec);
-		fresh_light.dir = light_vec;
-		fresh_light.red   = (float)0.0;
-		fresh_light.green = (float)0.0;
-		fresh_light.blue  = (float)1.0;
-		fresh_light.intensity = (float)1.0;
-		addLight( fresh_light);
-
-		// Light #3
-		fresh_light = MemMgr.Light();
-		light_vec = MemMgr.Vec3f( (float)0.0, (float)-1.0, (float)0.0);
-		Alg.normalize( light_vec);
-		fresh_light.dir = light_vec;
-		fresh_light.red   = (float)1.0;
-		fresh_light.green = (float)1.0;
-		fresh_light.blue  = (float)1.0;
-		fresh_light.intensity = (float)1.0;
-		addLight( fresh_light);
-
-		// Light #4
-		fresh_light = MemMgr.Light();
-		light_vec = MemMgr.Vec3f( (float)0.2, (float)0.0, (float)1.0);
-		Alg.normalize( light_vec);
-		fresh_light.dir = light_vec;
-		fresh_light.red   = (float)0.0;
-		fresh_light.green = (float)1.0;
-		fresh_light.blue  = (float)0.7;
-		fresh_light.intensity = (float)1.0;
-		addLight( fresh_light);
-
-
-		_from = MemMgr.Vec3f();
-		_at = MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0);
-		_up = MemMgr.Vec3f((float)0.0, (float)100.0, (float)0.0);
-
-		_obj1 = MemMgr.Obj();
-		_obj1.makeCube();
-
-
-		_cam_ctm = new Ctm();
-
-		_cam_ctm.set_trans( (float)0.0, (float)0.0, (float)3.0);
-		float x_scale = (float)1.0;
-		float y_scale = (float)1.0;
-		if (_width != _height) {
-			if (_width > _height) {
-				y_scale = (float)_height / (float) _width;
-			} else {
-				x_scale = (float)_width / (float)_height;
-			}
-		}
-		_cam_ctm.set_scale( x_scale, y_scale, (float)-(_zoom));
-	
-		_temp_mat1 = MemMgr.Mat4f();
-		_temp_mat2 = MemMgr.Mat4f();
-		
-		_initialized = true;
-
-	}
-
-	*/
 
 	public void initScene()
 	{
-		System.err.println("init.");
+		System.err.println("Render.initScene()");
 		_mgr = new MemMgr();
 		Alg.initTrig();
 		
@@ -849,7 +705,7 @@ public class Render extends JPanel implements Runnable
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
 		cube2Anim.addChild( _obj2);
 		xform2.addChild( cube2Anim);
-		//	_scene_root.addChild( xform2);
+		_scene_root.addChild( xform2);
 		
 		_obj3.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
 		Group xform3 = new Group("XFORM3");
@@ -860,7 +716,7 @@ public class Render extends JPanel implements Runnable
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
 		cube3Anim.addChild( _obj3);
 		xform3.addChild( cube3Anim);
-		//	_scene_root.addChild( xform3);
+		_scene_root.addChild( xform3);
 		
 		_scene_root.addChild( wu_points);
 
@@ -927,60 +783,7 @@ public class Render extends JPanel implements Runnable
 		}
     }
 
-	public void illuminate( Vec3f n, Vec3f light)
-	{
-		float dot   = (float)0.0;
-		Light l = null;
-		light.x = (float)0.0;
-		light.y = (float)0.0;
-		light.z = (float)0.0;
-
-		for (int i=0; i<_lights.size(); i++) {
-			l = (Light)_lights.get(i);
-			dot = -Alg.dot( l.dir, n);
-			if (dot > 0.0) {
-				light.x += dot * l.intensity * l.red;
-				light.y += dot * l.intensity * l.green;
-				light.z += dot * l.intensity * l.blue;
-				light.w += dot * l.intensity;
-			}
-		}
-		//light.x += _amb_red;
-		//light.y += _amb_green;
-		//light.z += _amb_blue;
-		if (light.x > 1.0) light.x = (float)1.0;
-		if (light.y > 1.0) light.y = (float)1.0;
-		if (light.z > 1.0) light.z = (float)1.0;
-		if (light.w > 1.0) light.w = (float)1.0;
-	}
-
-	public void illuminate( VecSf n, Vec3f light)
-	{
-		float dot   = (float)0.0;
-		Light l = null;
-		light.x = (float)0.0;
-		light.y = (float)0.0;
-		light.z = (float)0.0;
-
-		for (int i=0; i<_lights.size(); i++) {
-			l = (Light)_lights.get(i);
-			dot = -Alg.dot( l.s_dir, n);
-			if (dot > 0.0) {
-				light.x += dot * l.intensity * l.red;
-				light.y += dot * l.intensity * l.green;
-				light.z += dot * l.intensity * l.blue;
-				light.w += dot * l.intensity;
-			}
-		}
-		//light.x += _amb_red;
-		//light.y += _amb_green;
-		//light.z += _amb_blue;
-		if (light.x > 1.0) light.x = (float)1.0;
-		if (light.y > 1.0) light.y = (float)1.0;
-		if (light.z > 1.0) light.z = (float)1.0;
-		if (light.w > 1.0) light.w = (float)1.0;
-	}
-
+	
 	public void drawTriangles( Mat4f m, ArrayList<Triangle> tlist)
     {
 		Vec3f p1 = MemMgr.Vec3f();
@@ -1094,16 +897,28 @@ public class Render extends JPanel implements Runnable
 					t.v2.invz = (float)1.0 / p2.z;
 					t.v3.invz = (float)1.0 / p3.z;
 					t.v1.zbuf = (int)(t.v1.invz * (float)10000.0);
-					if (t.v1.zbuf > MAX24BIT) t.v1.zbuf = MAX24BIT;
-					if (t.v1.zbuf < 1) t.v1.zbuf = 1;
+					if (t.v1.zbuf > MAX24BIT) {
+						t.v1.zbuf = MAX24BIT;
+					}
+					if (t.v1.zbuf < 1) {
+						t.v1.zbuf = 1;
+					}
 					t.v2.zbuf = (int)(t.v2.invz * (float)10000.0);
-					if (t.v2.zbuf > MAX24BIT) t.v2.zbuf = MAX24BIT;
-					if (t.v2.zbuf < 1) t.v2.zbuf = 1;
+					if (t.v2.zbuf > MAX24BIT) {
+						t.v2.zbuf = MAX24BIT;
+					}
+					if (t.v2.zbuf < 1) {
+						t.v2.zbuf = 1;
+					}
 					t.v3.zbuf = (int)(t.v3.invz * (float)10000.0);
-					if (t.v3.zbuf > MAX24BIT) t.v3.zbuf = MAX24BIT;
-					if (t.v3.zbuf < 1) t.v3.zbuf = 1;
+					if (t.v3.zbuf > MAX24BIT) {
+						t.v3.zbuf = MAX24BIT;
+					}
+					if (t.v3.zbuf < 1) {
+						t.v3.zbuf = 1;
+					}
 		    		    
-					drawTriangleWithMaterial( t, p1, p2, p3, light, mat);
+					Shader.drawTriangleWithMaterial( t, p1, p2, p3, light, _lights, mat);
 				}
 			}	
 		}
@@ -1113,284 +928,6 @@ public class Render extends JPanel implements Runnable
 		MemMgr.done( c  );
 		MemMgr.done( light );
 		MemMgr.done( look );
-	}
-
-	public void drawTriangleWithMaterial (
-		Triangle t,
-		Vec3f p1,
-		Vec3f p2,
-		Vec3f p3,
-		Vec3f light,
-		Material mat
-		) 
-	{
-		int color = 0;
-		int red, green, blue; /* inten; */
-		float fog;
-		Vec3f n  = MemMgr.Vec3f();
-	
-		// TRANSP light model
-		if (mat._lightmodel == Material.TRANSP) {
-			
-			TranspTriangle.drawTranspTriangle( t, mat);
-		}
-		// PHONG lighting model (calculate specular highlights from each light source)
-		else if (mat._lightmodel == Material.PHONG) {
-
-			// Get light contribution at vertex 1
-			color = mat._color;
-			Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, t.v1.w_n);
-			Alg.normalize( t.v1.w_n);
-			// Get light contribution at vertex 2
-			Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, t.v2.w_n);
-			Alg.normalize( t.v2.w_n);
-			// Get light contribution at vertex 3
-			Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, t.v3.w_n);
-			Alg.normalize( t.v3.w_n);
-		
-			PhongTriangle.drawPhongTriangle( t, mat);
-		} 
-		else if (mat._lightmodel == Material.GOURAUD) {
-				
-			if (mat.TEXTURE == true) {
-
-				// Get light contribution at vertex 1
-				color = mat._color;
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-				Alg.normalize( n);
-				illuminate( n, light);
-				t.v1.r = ((int)((float)255.0 * light.x)<<16);
-				t.v1.g = ((int)((float)255.0 * light.y)<<16);
-				t.v1.b = ((int)((float)255.0 * light.z)<<16);
-				// Get light contribution at vertex 2
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-				Alg.normalize( n);
-				illuminate( n, light);
-				t.v2.r = ((int)((float)255.0 * light.x)<<16);
-				t.v2.g = ((int)((float)255.0 * light.y)<<16);
-				t.v2.b = ((int)((float)255.0 * light.z)<<16);
-				// Get light contribution at vertex 3
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-				Alg.normalize( n);
-				illuminate( n, light);
-				t.v3.r = ((int)((float)255.0 * light.x)<<16);
-				t.v3.g = ((int)((float)255.0 * light.y)<<16);
-				t.v3.b = ((int)((float)255.0 * light.z)<<16);
-			
-				if (mat.SPEED >= Material.FAST) {
-					GouraudTriangle.drawFastGouraudTextureTriangle( t, mat);
-				} else {
-					GouraudTriangle.drawGouraudTextureTriangle( t, mat);
-				}
-			} else {
-
-				// Get light contribution at vertex 1
-				color = mat._color;
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-				Alg.normalize( n);
-				illuminate( n, light);
-				t.v1.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
-				t.v1.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
-				t.v1.b = ((int)((float)( color      & 255) * light.z)<<16);
-				// Get light contribution at vertex 2
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-				Alg.normalize( n);
-				illuminate( n, light);
-				t.v2.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
-				t.v2.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
-				t.v2.b = ((int)((float)( color      & 255) * light.z)<<16);
-				// Get light contribution at vertex 3
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-				Alg.normalize( n);
-				illuminate( n, light);
-				t.v3.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
-				t.v3.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
-				t.v3.b = ((int)((float)( color      & 255) * light.z)<<16);
-
-				GouraudTriangle.drawGouraudTriangle( t, mat);
-			}
-		} 
-		// FOG lighting model (increasing blend w/ background color based on distance), textured or solid color
-		else if (mat._lightmodel == Material.FOG) {
-				
-			// If FOG + texture
-			if (mat.TEXTURE == true) {
-				// This is to correct for the effect
-				// of a camera zoom factor on fog.
-				// We want fog to remain an illusion of
-				// constant world-space.  But adding
-				// a zoom factor to the camera moves
-				// points closer-to/farther-from the
-				// camera.  We want the points themselves
-				// to move, but we want fog calculated on
-				// them as if the zoom factor really were 1.0
-
-				p1.z *= _zoom;
-				p2.z *= _zoom;
-				p3.z *= _zoom;
-				// Get fog contribution at vertex 1
-				if (p1.z < mat._fog_near) {
-					fog = mat._fog_near_val;
-				} else if (p1.z > mat._fog_far) {
-					fog = mat._fog_far_val;
-				} else {
-					fog = (p1.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-					if (mat._fog_type == Material.SQUARE) fog *= fog;
-					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-				}
-				t.v1.r = t.v1.g = t.v1.b = ((int)((float)255.0 * (1.0-fog))<<16);
-				// Get fog contribution at vertex 2
-				if (p2.z < mat._fog_near) {
-					fog = mat._fog_near_val;
-				} else if (p2.z > mat._fog_far) {
-					fog = mat._fog_far_val;
-				} else {
-					fog = (p2.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-					if (mat._fog_type == Material.SQUARE) fog *= fog;
-					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-				}
-				t.v2.r = t.v2.g = t.v2.b = ((int)((float)255.0 * (1.0-fog))<<16);
-				// Get fog contribution at vertex 3
-				if (p3.z < mat._fog_near) {
-					fog = mat._fog_near_val;
-				} else if (p3.z > mat._fog_far) {
-					fog = mat._fog_far_val;
-				} else {
-					fog = (p3.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-					if (mat._fog_type == Material.SQUARE) fog *= fog;
-					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-				}
-				t.v3.r = t.v3.g = t.v3.b = ((int)((float)255.0 * (1.0-fog))<<16);
-
-				if (mat.SPEED >= Material.FAST) {
-					GouraudTriangle.drawFastGouraudTextureTriangle( t, mat);
-				} else {
-					GouraudTriangle.drawGouraudTextureTriangle( t, mat);
-				}
-
-			// If FOG + no texture (just solid color)
-			} else {
-
-				// Get fog contribution at vertex 1
-				color = mat._color;
-				// Get fog contribution at vertex 1
-				if (p1.z < mat._fog_near) {
-					fog = mat._fog_near_val;
-				} else if (p1.z > mat._fog_far) {
-					fog = mat._fog_far_val;
-				} else {
-					fog = (p1.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-					if (mat._fog_type == Material.SQUARE) fog *= fog;
-					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-				}
-				t.v1.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_R) * fog )               ) << 16;
-				t.v1.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_G) * fog )               ) << 16;
-				t.v1.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_B) * fog )               ) << 16;
-
-				// Get fog contribution at vertex 2
-				if (p2.z < mat._fog_near) {
-					fog = mat._fog_near_val;
-				} else if (p2.z > mat._fog_far) {
-					fog = mat._fog_far_val;
-				} else {
-					fog = (p2.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-					if (mat._fog_type == Material.SQUARE) fog *= fog;
-					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-				}
-				t.v2.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_R) * fog )               ) << 16;
-				t.v2.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_G) * fog )               ) << 16;
-				t.v2.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_B) * fog )               ) << 16;
-				// Get fog contribution at vertex 3
-				if (p3.z < mat._fog_near) {
-					fog = mat._fog_near_val;
-				} else if (p3.z > mat._fog_far) {
-					fog = mat._fog_far_val;
-				} else {
-					fog = (p3.z-mat._fog_near) / (mat._fog_far - mat._fog_near);
-					if (mat._fog_type == Material.SQUARE) fog *= fog;
-					fog = mat._fog_near_val + fog * (mat._fog_far_val - mat._fog_near_val);
-				}
-				t.v3.r = ( (int)((float)((color>>16) & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_R) * fog )               ) << 16;
-				t.v3.g = ( (int)((float)((color>>8 ) & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_G) * fog )               ) << 16;
-				t.v3.b = ( (int)((float)( color      & 255) * (1.0-fog)) +
-							(int)((float)(mat._fog_B) * fog )               ) << 16;
-
-				GouraudTriangle.drawGouraudTriangle( t, mat);
-			}
-		} 
-		// FLAT lighting model (cosine of surface normal to all lights) - can be textured or solid color
-		else if (mat._lightmodel == Material.FLAT) {
-
-			if (mat.TEXTURE == true) {
-				
-				// Find light contribution to face.
-				illuminate( n, light);
-				
-				color = mat._color;
-				red   = (int)((float)255.0 * light.x);
-				green = (int)((float)255.0 * light.y);
-				blue  = (int)((float)255.0 * light.z);
-				if (red  >255) red   = 255;
-				if (green>255) green = 255;
-				if (blue >255) blue  = 255;
-				mat._dif_R = red;
-				mat._dif_G = green;
-				mat._dif_B = blue;
-				
-				if (mat.SPEED >= Material.FAST) {
-					FlatTriangle.drawFastFlatTextureTriangle( t, mat);
-				} else {
-					FlatTriangle.drawFlatTextureTriangle( t, mat);	
-				}
-			} else {
-			
-				// Find light contribution to face.
-				illuminate( n, light);
-				
-				color = mat._color;
-				red   = (int)((float)((color>>16) & 255) * light.x);
-				green = (int)((float)((color>>8 ) & 255) * light.y);
-				blue  = (int)((float)( color      & 255) * light.z);
-				if (red  >255) red   = 255;
-				if (green>255) green = 255;
-				if (blue >255) blue  = 255;
-				color = (255<<24) + (red<<16) + (green<<8) + (blue);
-			
-				SolidTriangle.drawSolidTriangle( t, color, mat);
-			}
-		} 
-		// SOLID lighting model (constant color, no lighting contribution, but could be textured)
-		else if (mat._lightmodel == Material.SOLID) {
-
-			if (mat.TEXTURE == true) {
-				if (mat.SPEED >= Material.FAST) {
-					SolidTriangle.drawFastSolidTextureTriangle( t, mat);
-				} else {
-					SolidTriangle.drawSolidTextureTriangle( t, mat);	
-				}
-			} else {
-				SolidTriangle.drawSolidTriangle( t, mat._color, mat);
-			}
-		}
-		MemMgr.done( n);
-	}
-
-	public void drawPointset( Mat4f m, ArrayList<Vertex> vlist, Material mat)
-    {
-		Particle.drawPointset( m, vlist, mat);
-	}
-
-    public void drawWireframe( Mat4f m, ArrayList<Edge> elist, Material mat)
-    {
-		Line.drawWireframe( m, elist, mat);
 	}
 }
 

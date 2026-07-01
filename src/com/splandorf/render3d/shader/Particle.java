@@ -112,19 +112,23 @@ public class Particle extends Shader {
 		
 		Alg.mult( m, loc);
 		
-		if (loc.z < (float)0.0) return;
-		
+		if (loc.z < (float)0.0) {
+            return;
+        }
 		int cx = _width / 2;
 		int cy = _height / 2;
 		float xm = (float)cx*(float)0.6;
 		float ym = (float)cy*(float)0.6;
 		int x    = cx + (int)(loc.x / loc.z * xm);
 		int y    = cy + (int)(loc.y / loc.z * ym);
-		int zbuf = (int)((float)10000.0 / loc.z);
+        float invz = (float)1.0 / loc.z;
+		int zbuf = (int)(invz * (float)10000.0);
 		if (zbuf > Render.MAX24BIT) {
             zbuf = Render.MAX24BIT;
         }
-		if (zbuf < 1) zbuf = 1;
+		if (zbuf < 1) {
+            zbuf = 1;
+        }
 		
 		Material mat = obj.mat;
 		

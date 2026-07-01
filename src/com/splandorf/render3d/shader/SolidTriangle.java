@@ -128,7 +128,7 @@ public class SolidTriangle extends Shader
 		int pixel = lx + y * _width;
 		for (int i=lx; i<rx; i++) {
 			if (i>=0 && i<_width) {
-				if ( z < _zbuf[ pixel ] ) {
+				if ( z > _zbuf[ pixel ] ) {
 					if (mat.TRANSPARENT) {
 						tcol = _pix[ pixel];
 						_pix[ pixel ] = 
@@ -590,8 +590,9 @@ public class SolidTriangle extends Shader
 		if (dy_1_2 != 0) {
 
 			for (int i=v1.y; i<v2.y; i++) {
-				if (i>0 && i<_height) 
+				if (i>0 && i<_height) {
 					drawFastTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+				}	
 				lx += dx_1_3;
 				rx += dx_1_2;
 				lz += dz_1_3;
@@ -617,8 +618,9 @@ public class SolidTriangle extends Shader
 		if (dy_2_3 != 0) {
 
 			for (int i=v2.y; i<v3.y; i++) {
-				if (i>0 && i<_height) 
+				if (i>0 && i<_height) {
 					drawFastTextureSpan( i, lx>>16, rx>>16, lz, rz, ls, rs, lt, rt, mat);
+				}
 				lx += dx_1_3;
 				rx += dx_2_3;
 				lz += dz_1_3;
@@ -682,7 +684,7 @@ public class SolidTriangle extends Shader
 		for (int i=lx; i<rx; i++) {
 			if (i>=0 && i<_width) {
 
-				if ( z < _zbuf[ pixel ] ) {
+				if ( z > _zbuf[ pixel ] ) {
 					texel = mat._texture[ (s>>9)%128 + ((t>>9)%128)*128 ];
 					if (texel!=0) {
 						if (mat.TRANSPARENT) {
