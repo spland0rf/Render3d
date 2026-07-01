@@ -118,7 +118,11 @@ public class Shader {
 			Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, t.v3.w_n);
 			Alg.normalize( t.v3.w_n);
 		
-			PhongTriangle.drawPhongTriangle( t, mat);
+			if (mat.BUMP==false) {
+				PhongTriangle.drawPhongTriangle( t, mat);
+			} else {
+				BumpTriangle.drawBumpTriangle( t, mat);
+			}
 		} 
 		else if (mat._lightmodel == Material.GOURAUD) {
 				

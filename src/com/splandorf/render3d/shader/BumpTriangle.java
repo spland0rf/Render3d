@@ -6,7 +6,7 @@ import com.splandorf.render3d.scene.*;
 public class BumpTriangle extends Shader
 {
 
-	public void bumpTriangle( Triangle t, Material mat)
+	public static void drawBumpTriangle( Triangle t, Material mat)
     {
 		// Order vertices {v1,v2,v3} by increasing Y
 		Vertex v1 = t.v1;

@@ -68,6 +68,7 @@ public class Obj extends Node
 				if (mat._lightmodel == Material.TRANSP ) {
 					rend.addToTranspQueue( my_xform, my_n_xform, this);
 				} else {
+//					System.out.println( "----- Drawing: " + name + " -----");
 					rend.drawTriangles( my_xform, tlist);
 				}
 			}
