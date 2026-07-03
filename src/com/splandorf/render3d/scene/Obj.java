@@ -49,13 +49,13 @@ public class Obj extends Node
 		return (Triangle)tlist.get(i);
 	}
 
-	public void render( Render rend, Mat4f xform, Mat4f nxform, float time)
+	public void render( Render rend, Mat4f xform, Mat4f n_xform, float time)
     {
 		Mat4f my_xform   = MemMgr.Mat4f();
 		Mat4f my_n_xform = MemMgr.Mat4f();
 		
 		Alg.mult( ctm().ctm(), xform, my_xform);
-		Alg.mult( ctm().normal_ctm(), nxform, my_n_xform);
+		Alg.mult( ctm().normal_ctm(), n_xform, my_n_xform);
 		
 		if (mat.PARTICLE == true) {
 			if (mat._lightmodel == Material.FLARE) {
@@ -69,7 +69,7 @@ public class Obj extends Node
 					rend.addToTranspQueue( my_xform, my_n_xform, this);
 				} else {
 //					System.out.println( "----- Drawing: " + name + " -----");
-					rend.drawTriangles( my_xform, tlist);
+					rend.drawTriangles( my_xform, my_n_xform, tlist);
 				}
 			}
 			if ( mat.WIREFRAME == true) {
@@ -157,6 +157,7 @@ public class Obj extends Node
 			Alg.cross( one, two, normal);
 			Alg.normalize( normal);
 			t.n = normal;
+			t.w_n = MemMgr.Vec3f();
 			MemMgr.done( one);
 			MemMgr.done( two);
 
@@ -201,6 +202,7 @@ public class Obj extends Node
 			Alg.cross( one, two, normal);
 			Alg.normalize( normal);
 			t.n = normal;
+			t.w_n = MemMgr.Vec3f();
 			MemMgr.done( one);
 			MemMgr.done( two);
 			

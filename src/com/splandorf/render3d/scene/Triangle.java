@@ -28,6 +28,7 @@ public class Triangle extends Object
 
 	public Vec3f c;
 	public Vec3f n;
+	public Vec3f w_n;
 
 	public Material mat = null;
 	public Obj obj;

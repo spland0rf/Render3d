@@ -749,10 +749,10 @@ public class Render extends JPanel implements Runnable
 		*/
 
 
-	public void addToTranspQueue( Mat4f xform, Mat4f nxform, Obj obj)
+	public void addToTranspQueue( Mat4f xform, Mat4f n_xform, Obj obj)
     {
 		_transpQueue.add( xform);
-		_transpQueue.add( nxform);
+		_transpQueue.add( n_xform);
 		_transpQueue.add( obj);
     }
     
@@ -770,7 +770,7 @@ public class Render extends JPanel implements Runnable
 				if (obj.mat.PARTICLE == true) {
 					Particle.drawParticle( xform, obj);
 				} else {
-					drawTriangles( xform, obj.tlist);
+					drawTriangles( xform, nxform, obj.tlist);
 				}
 				_transpQueue.remove(0);
 				_transpQueue.remove(0);
@@ -784,7 +784,7 @@ public class Render extends JPanel implements Runnable
     }
 
 	
-	public void drawTriangles( Mat4f m, ArrayList<Triangle> tlist)
+	public void drawTriangles( Mat4f m, Mat4f nxform,ArrayList<Triangle> tlist)
     {
 		Vec3f p1 = MemMgr.Vec3f();
 		Vec3f p2 = MemMgr.Vec3f();
