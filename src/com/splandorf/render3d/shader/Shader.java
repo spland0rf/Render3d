@@ -107,17 +107,6 @@ public class Shader {
 		// PHONG lighting model (calculate specular highlights from each light source)
 		else if (mat._lightmodel == Material.PHONG) {
 
-			// Get light contribution at vertex 1
-			color = mat._color;
-			Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, t.v1.w_n);
-			Alg.normalize( t.v1.w_n);
-			// Get light contribution at vertex 2
-			Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, t.v2.w_n);
-			Alg.normalize( t.v2.w_n);
-			// Get light contribution at vertex 3
-			Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, t.v3.w_n);
-			Alg.normalize( t.v3.w_n);
-		
 			if (mat.BUMP==false) {
 				PhongTriangle.drawPhongTriangle( t, mat);
 			} else {

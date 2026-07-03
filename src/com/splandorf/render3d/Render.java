@@ -199,7 +199,7 @@ public class Render extends JPanel implements Runnable
 			
 			_cam_ctm.orient( _from, _at, _up);
 			
-			_scene_root.render( this, _cam_ctm.inv_ctm(), Alg.IDENT_MAT, cur_time );
+			_scene_root.render( this, _cam_ctm.inv_ctm(), _cam_ctm.inv_normal_ctm(), cur_time );
 			
 			if (_transpQueue.size() > 0) {
 				renderTranspObjects();
@@ -784,7 +784,7 @@ public class Render extends JPanel implements Runnable
     }
 
 	
-	public void drawTriangles( Mat4f m, Mat4f nxform,ArrayList<Triangle> tlist)
+	public void drawTriangles( Mat4f m, Mat4f n_xform, ArrayList<Triangle> tlist)
     {
 		Vec3f p1 = MemMgr.Vec3f();
 		Vec3f p2 = MemMgr.Vec3f();
@@ -916,6 +916,26 @@ public class Render extends JPanel implements Runnable
 					}
 					if (t.v3.zbuf < 1) {
 						t.v3.zbuf = 1;
+					}
+
+					// Transform triangle face normal into world space
+					// if it exists
+					if (t.n != null) {
+						Alg.mult( n_xform, t.n, t.w_n);
+						Alg.normalize( t.w_n);
+					}
+					// Transform traingle vertex normals into world space if they exist
+					if (t.v1.n != null) {
+						Alg.mult( n_xform, t.v1.n, t.v1.w_n);
+						Alg.normalize( t.v1.w_n);
+					}
+					if (t.v2.n != null) {
+						Alg.mult( n_xform, t.v2.n, t.v2.w_n);
+						Alg.normalize( t.v2.w_n);
+					}
+					if (t.v3.n != null) {
+						Alg.mult( n_xform, t.v3.n, t.v3.w_n);
+						Alg.normalize( t.v3.w_n);
 					}
 
 					if (i%20==0) {
