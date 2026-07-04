@@ -38,8 +38,8 @@ public class FlatTriangle extends Shader {
 
 		int lx = v1.x<<16;
 		int rx = v1.x<<16;
-		float lz = v1.invz;
-		float rz = v1.invz;
+		float lz = v1.zbuf;
+		float rz = v1.zbuf;
 		float ls = v1.invs;
 		float rs = v1.invs;
 		float lt = v1.invt;

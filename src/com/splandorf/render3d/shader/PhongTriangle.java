@@ -37,8 +37,8 @@ public class PhongTriangle extends Shader
 
 		int lx = v1.x<<16;
 		int rx = v1.x<<16;
-		int lz = v1.z;
-		int rz = v1.z;
+		int lz = v1.zbuf;
+		int rz = v1.zbuf;
 		int la = (int)(v1.w_n.x * (float)32768.0 + (float)32768.0);
 		int ra = (int)(v1.w_n.x * (float)32768.0 + (float)32768.0);
 		int lb = (int)(v1.w_n.y * (float)32768.0 + (float)32768.0);
@@ -54,19 +54,19 @@ public class PhongTriangle extends Shader
 		int db_1_2=0, db_1_3=0, db_2_3=0;
 		if (dy_1_2 != 0) {
 			dx_1_2 = ((v2.x<<16)-(v1.x<<16)) / dy_1_2;
-			dz_1_2 = (v2.z-v1.z) / dy_1_2;
+		    dz_1_2 = (v2.zbuf-v1.zbuf) / dy_1_2;
 			da_1_2 = (int)((v2.w_n.x-v1.w_n.x)*(float)32768.0) / dy_1_2;
 			db_1_2 = (int)((v2.w_n.y-v1.w_n.y)*(float)32768.0) / dy_1_2;
 		}
 		if (dy_1_3 != 0) {
 			dx_1_3 = ((v3.x<<16)-(v1.x<<16)) / dy_1_3;
-			dz_1_3 = (v3.z-v1.z) / dy_1_3;
+			dz_1_3 = (v3.zbuf-v1.zbuf) / dy_1_3;
 			da_1_3 = (int)((v3.w_n.x-v1.w_n.x)*(float)32768.0) / dy_1_3;
 			db_1_3 = (int)((v3.w_n.y-v1.w_n.y)*(float)32768.0) / dy_1_3;
 		}
 		if (dy_2_3 != 0) {
 			dx_2_3 = ((v3.x<<16)-(v2.x<<16)) / dy_2_3;
-			dz_2_3 = (v3.z-v2.z) / dy_2_3;
+			dz_2_3 = (v3.zbuf-v2.zbuf) / dy_2_3;
 			da_2_3 = (int)((v3.w_n.x-v2.w_n.x)*(float)32768.0) / dy_2_3;
 			db_2_3 = (int)((v3.w_n.y-v2.w_n.y)*(float)32768.0) / dy_2_3;
 		}
@@ -94,7 +94,7 @@ public class PhongTriangle extends Shader
 		// This way, bottom half will *be* the whole, correct
 		// triangle in this special case.
 		rx = v2.x<<16;
-		rz = v2.z;
+		rz = v2.zbuf;
 		ra = (int)(v2.w_n.x*32768.0 + 32768.0);
 		rb = (int)(v2.w_n.y*32768.0 + 32768.0);
 
@@ -155,7 +155,9 @@ public class PhongTriangle extends Shader
 		}
 
 		// Clipping against sides of screen;
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			a += -lx * da;
@@ -167,7 +169,7 @@ public class PhongTriangle extends Shader
 		int pixel = lx + y * _width;
 		for (int i=lx; i<rx; i++) {
 			if (i>=0 && i<_width) {
-				if ( z < _zbuf[ pixel ] ) {
+				if ( z > _zbuf[ pixel ] ) {
 
 //					if (mat.TRANSPARENT) {
 //						tcol = _pix[ pixel];

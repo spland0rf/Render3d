@@ -66,13 +66,7 @@ public class Render extends JPanel implements Runnable
     float _amb_green = (float)0.0;
     float _amb_blue  = (float)0.0;
     
-    Obj _obj1 = null;
-    Obj _obj2 = null;
-    Obj _obj3 = null;
-    Obj _obj4 = null;
-    Obj _obj5 = null;
-
-    Mat4f _temp_mat1 = null;
+	Mat4f _temp_mat1 = null;
     Mat4f _temp_mat2 = null;
 
 	ArrayList<Object> _transpQueue =  new ArrayList<Object>( 10);
@@ -191,9 +185,9 @@ public class Render extends JPanel implements Runnable
 			System.arraycopy( _zbuf_maxfar_pix, 0, _zbuf, 0, _height*_width);
 			
 			//_incr = 10.0;
-			_incr += 0.0001;
-			_from.z = (float)(Math.sin(_incr) * 3.5);
-			_from.x = (float)(Math.cos(_incr) * 5.5);
+			_incr += 0.0002;
+			_from.z = (float)(Math.sin(_incr) * 5.0);
+			_from.x = (float)(Math.cos(_incr) * 5.0);
 			_from.y = (float) Math.sin(_incr * 5.0) * (float)2.0 + (float)0.0;
 			//_from.y = -(float)2.0;
 			
@@ -426,53 +420,53 @@ public class Render extends JPanel implements Runnable
 		Alg.initTrig();
 		
 		// Initialize lights, ambient and directional.
-		_amb_red   = (float)0.3;
-		_amb_green = (float)0.2;
-		_amb_blue  = (float)0.2;
+		_amb_red   = (float)0.0;
+		_amb_green = (float)0.1;
+		_amb_blue  = (float)0.1;
 		_lights = new ArrayList<Light>(10);
 		
 		// Light #1
 		Light fresh_light = MemMgr.Light();
-		Vec3f light_vec = MemMgr.Vec3f( (float)0.0, (float)-1.0, (float)-1.0);
+		Vec3f light_vec = MemMgr.Vec3f( (float)-1.0, (float)-1.0, (float)-1.0);
 		Alg.normalize( light_vec);
 		fresh_light.dir = light_vec;
 		fresh_light.red   = (float)1.0;
 		fresh_light.green = (float)0.0;
 		fresh_light.blue  = (float)0.0;
-		fresh_light.intensity = (float)1.0;
+		fresh_light.intensity = (float)0.5;
 		addLight( fresh_light);
 		
 		// Light #2
 		fresh_light = MemMgr.Light();
-		light_vec = MemMgr.Vec3f( (float)0.0, (float)-1.0, (float)1.0);
+		light_vec = MemMgr.Vec3f( (float)1.0, (float)-1.0, (float)1.0);
+		Alg.normalize( light_vec);
+		fresh_light.dir = light_vec;
+		fresh_light.red   = (float)0.0;
+		fresh_light.green = (float)1.0;
+		fresh_light.blue  = (float)0.0;
+		fresh_light.intensity = (float)0.5;
+		addLight( fresh_light);
+		
+		// Light #3
+		fresh_light = MemMgr.Light();
+		light_vec = MemMgr.Vec3f( (float)-1.0, (float)1.0, (float)1.0);
 		Alg.normalize( light_vec);
 		fresh_light.dir = light_vec;
 		fresh_light.red   = (float)0.0;
 		fresh_light.green = (float)0.0;
 		fresh_light.blue  = (float)1.0;
-		fresh_light.intensity = (float)1.0;
-		addLight( fresh_light);
-		
-		// Light #3
-		fresh_light = MemMgr.Light();
-		light_vec = MemMgr.Vec3f( (float)0.0, (float)-1.0, (float)0.0);
-		Alg.normalize( light_vec);
-		fresh_light.dir = light_vec;
-		fresh_light.red   = (float)1.0;
-		fresh_light.green = (float)1.0;
-		fresh_light.blue  = (float)1.0;
-		fresh_light.intensity = (float)1.0;
+		fresh_light.intensity = (float)0.5;
 		addLight( fresh_light);
 		
 		// Light #4
 		fresh_light = MemMgr.Light();
-		light_vec = MemMgr.Vec3f( (float)0.2, (float)0.0, (float)1.0);
+		light_vec = MemMgr.Vec3f( (float)1.0, (float)1.0, (float)-1.0);
 		Alg.normalize( light_vec);
 		fresh_light.dir = light_vec;
-		fresh_light.red   = (float)0.0;
+		fresh_light.red   = (float)0.5;
 		fresh_light.green = (float)1.0;
-		fresh_light.blue  = (float)0.7;
-		fresh_light.intensity = (float)1.0;
+		fresh_light.blue  = (float)0.5;
+		fresh_light.intensity = (float)0.5;
 		addLight( fresh_light);
 		
 		_from = MemMgr.Vec3f();
@@ -526,8 +520,8 @@ public class Render extends JPanel implements Runnable
 		wu_mat._pointstyle = Material.GAUSSIAN;
 		wu_points.mat = wu_mat;
 		
-		_obj1 = GeometryFactory.makeOpenBox();
-		_obj1.setName( "CUBE1");
+		Obj box1 = GeometryFactory.makeOpenBox();
+		box1.setName( "BOX1");
 		Material t1  = MemMgr.Material();
 		t1._lightmodel = Material.TRANSP;
 		t1._color = (255<<24) + (70<<16) + (50<<8) + 0;
@@ -536,10 +530,35 @@ public class Render extends JPanel implements Runnable
 		t1.TRIANGLES = true;
 		t1.ANTIALIAS = true;
 		t1._linestyle = Material.THICK;
-		_obj1.mat = t1;
+		box1.mat = t1;
 		
-		_obj4 = GeometryFactory.makeOpenBox();
-		_obj4.setName( "CUBE4");
+		Obj box2 = GeometryFactory.makeOpenBox();
+		box2.setName( "BOX2");
+		Material t2 = MemMgr.Material();
+		t2._lightmodel = Material.TRANSP;
+		t2._color = (255<<24) + (70<<16) + (0<<8) + 50;
+		t2.BACKFACE_CULL = false;
+		t2.WIREFRAME = true;
+		t2.TRIANGLES = true;
+		t2.ANTIALIAS = true;
+		t2._linestyle = Material.THICK;
+		box2.mat = t2;
+		
+		Obj box3 = GeometryFactory.makeOpenBox();
+		box3.setName( "BOX3");
+		Material t3 = MemMgr.Material();
+		t3._lightmodel = Material.TRANSP;
+		t3._color = (255<<24) + (0<<16) + (70<<8) + 50;
+		t3.BACKFACE_CULL = false;
+		t3.WIREFRAME = true;
+		t3.TRIANGLES = true;
+		t3.ANTIALIAS = true;
+		t3._linestyle = Material.THICK;
+		box3.mat = t3;
+
+		/*
+		Obj box4 = GeometryFactory.makeOpenBox();
+		box4.setName( "BOX4");
 		Material t4 = MemMgr.Material();
 		t4._lightmodel = Material.TRANSP;
 		t4._color = (255<<24) + (0<<16) + (70<<8) + 50;
@@ -548,10 +567,10 @@ public class Render extends JPanel implements Runnable
 		t4.TRIANGLES = true;
 		t4.ANTIALIAS = true;
 		t4._linestyle = Material.THICK;
-		_obj4.mat = t4;
-		
-		_obj5 = GeometryFactory.makeOpenBox();
-		_obj5.setName( "CUBE5");
+		box4.mat = t4;
+
+		Obj box5 = GeometryFactory.makeOpenBox();
+		box5.setName( "BOX5");
 		Material t5 = MemMgr.Material();
 		t5._lightmodel = Material.TRANSP;
 		t5._color = (255<<24) + (50<<16) + (0<<8) + 70;
@@ -561,36 +580,46 @@ public class Render extends JPanel implements Runnable
 		t5.ANTIALIAS = true;
 		t5._linestyle = Material.THICK;
 		_obj5.mat = t5;
-				
-		// Metal donut
-		_obj2 = GeometryFactory.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
-		_obj2.setName( "METAL_DONUT");
+		*/
+
+		// Metal donut 1
+		Obj donut1 = GeometryFactory.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
+		donut1.setName( "METAL_DONUT1");
 		Material texture = MemMgr.Material();
 		texture._lightmodel  = Material.PHONG;
-		texture._color = (255<<24) + (255<<16) + (100<<8) + 255;
-		//		texture.TEXTURE = true;
-		texture.SPEED = Material.FAST;
-		texture._env_map = loadTexture("res/environments/envplane.gif", texture);
-		//		texture._env_map = makeLightMap();
-		texture._bump_map = loadBumpMap( "res/textures/weave_height2.gif", texture);
-		texture._fog_R = 0;
-		texture._fog_G = 0;
-		texture._fog_B = 0;
-		texture._fog_near = (float)2.5;
-		texture._fog_far  = (float)4.5;
-		texture._fog_near_val = (float)0.0;
-		texture._fog_far_val  = (float)1.0;
-		texture.ANTIALIAS = true;
-		texture._linestyle = Material.THICK;
 		texture.BUMP = true;
-		_obj2.mat = texture;
+		texture._env_map = loadTexture("res/environments/envplane.gif", texture);
+		texture._bump_map = loadBumpMap( "res/textures/weave_height2.gif", texture);
+		donut1.mat = texture;
+
+		// Metal donut 2
+		Obj donut2 = GeometryFactory.makeTorus(16, 24, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
+		donut2.setName( "METAL_DONUT2");
+		Material dtext2 = MemMgr.Material();
+		dtext2._lightmodel  = Material.PHONG;
+		dtext2.BUMP = false;
+		dtext2._env_map = loadTexture("res/environments/envchuckout.gif", dtext2);
+		donut2.mat = dtext2;
+
+		// Rainbox donut
+		Obj donut3 = GeometryFactory.makeTorus(4, 4, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
+		donut3.setName( "RAINBOW_DONUT");
+		Material dtext3 = MemMgr.Material();
+		dtext3._lightmodel  = Material.FLAT;
+		dtext3.TEXTURE = true;
+		dtext3._texture = loadTexture("res/textures/rainbowxholes2.gif", dtext3);
+		dtext3.TRANSPARENT = true;
+		dtext3._transp_R = 100;
+		dtext3._transp_B = 100;
+		dtext3._transp_G = 100;	
+		donut3.mat = dtext3;
 		
 		// Sphere
-		_obj3 = GeometryFactory.makeSphere( 7, 13, (float)0.0, (float)2.0, (float)0.0, (float)2.0);
-		_obj3.setName( "SPHERE");
+		Obj sphere = GeometryFactory.makeSphere( 7, 13, (float)0.0, (float)2.0, (float)0.0, (float)2.0);
+		sphere.setName( "SPHERE");
 		texture = MemMgr.Material();
 		texture._lightmodel  = Material.GOURAUD;
-		texture._color = (255<<24) + (255<<16) + (255<<8) + 255;
+		texture._color = (255<<24) + (254<<16) + (254<<8) + 254;
 		//		texture.TEXTURE = true;
 		texture.SPEED = Material.FAST;
 		//		texture.TRANSPARENT = true;
@@ -608,8 +637,7 @@ public class Render extends JPanel implements Runnable
 		texture._linestyle = Material.THICK;
 		texture.TRIANGLES = true;
 		texture.WIREFRAME = true;
-		_obj3.mat = texture;
-
+		sphere.mat = texture;
 
 		Obj flare1 = new Obj( "FLARE1");
 		texture = MemMgr.Material();
@@ -618,7 +646,7 @@ public class Render extends JPanel implements Runnable
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
 		texture._texture = loadTexture( "res/sprites/flare1.jpg", texture);
-		flare1.ctm().set_trans( (float)0.0, (float)2.7, (float)0.0);
+		flare1.ctm().set_trans( (float)0.0, (float)3.0, (float)0.0);
 		flare1.mat = texture;
 		
 		Obj flare2 = new Obj( "FLARE2");
@@ -628,7 +656,7 @@ public class Render extends JPanel implements Runnable
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
 		texture._texture = loadTexture( "res/sprites/flare.jpg", texture);
-		flare2.ctm().set_trans( (float)0.0, (float)-2.7, (float)0.0);
+		flare2.ctm().set_trans( (float)0.0, (float)-3.0, (float)0.0);
 		flare2.mat = texture;
 		
 		Obj flare3 = new Obj( "FLARE3");
@@ -638,7 +666,7 @@ public class Render extends JPanel implements Runnable
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
 		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
-		flare3.ctm().set_trans( (float)0.0, (float)0.0, (float)2.7);
+		flare3.ctm().set_trans( (float)0.0, (float)0.0, (float)3.0);
 		flare3.mat = texture;
 		
 		Obj flare4 = new Obj( "FLARE4");
@@ -648,7 +676,7 @@ public class Render extends JPanel implements Runnable
 		texture.PARTICLE  = true;
 		texture.WIREFRAME = false;
 		texture._texture = loadTexture( "res/sprites/flare3.jpg", texture);
-		flare4.ctm().set_trans( (float)0.0, (float)0.0, (float)-2.7);
+		flare4.ctm().set_trans( (float)0.0, (float)0.0, (float)-3.0);
 		flare4.mat = texture;
 		
 		Anim flare_rot = new Anim("FLARE_ROT");
@@ -672,51 +700,75 @@ public class Render extends JPanel implements Runnable
 		_scene_root.addChild( rot_root);
 		*/
 		
-		_obj1.ctm().set_scale( (float)1.3, (float)0.5, (float)0.5);
+		box1.ctm().set_scale( (float)1.3, (float)0.5, (float)0.5);
 		Anim cube1Anim = new Anim("ANIM1");
 		cube1Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)9.1,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)6.28318, (float)0.0) );
-		cube1Anim.addChild( _obj1);
+		cube1Anim.addChild( box1);
 		_scene_root.addChild( cube1Anim);
 		
-		_obj4.ctm().set_scale( (float)0.6, (float)1.75, (float)0.4);
+		box2.ctm().set_scale( (float)0.6, (float)1.75, (float)0.4);
 		Anim cube4Anim = new Anim("ANIM4");
 		cube4Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)8.1,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)6.28318, (float)0.0, (float)0.0) );
-		cube4Anim.addChild( _obj4);
+		cube4Anim.addChild( box2);
 		_scene_root.addChild( cube4Anim);
 		
-		_obj5.ctm().set_scale( (float)0.5, (float)0.6, (float)1.8);
+		box3.ctm().set_scale( (float)0.5, (float)0.6, (float)1.8);
 		Anim cube5Anim = new Anim("ANIM5");
 		cube5Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)7.0,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
-		cube5Anim.addChild( _obj5);
+		cube5Anim.addChild( box3);
 		_scene_root.addChild( cube5Anim);
 		
-		_obj2.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
-		Group xform2 = new Group("XFORM2");
-		xform2.ctm().set_trans( (float)-2.9, (float)0.0, (float)0.0);
-		Anim cube2Anim = new Anim("ANIM2");
-		cube2Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)2.8,
+		donut1.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
+		Group donut1_xform = new Group("DONUT1_XFORM");
+		donut1_xform.ctm().set_trans( (float)-2.9, (float)0.0, (float)0.0);
+		Anim donut1_anim = new Anim("DONUT1_ANIM");
+		donut1_anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)2.8,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
-		cube2Anim.addChild( _obj2);
-		xform2.addChild( cube2Anim);
-		_scene_root.addChild( xform2);
-		
-		_obj3.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
-		Group xform3 = new Group("XFORM3");
-		xform3.ctm().set_trans( (float)2.9, (float)0.0, (float)0.0);
-		Anim cube3Anim = new Anim("ANIM3");
-		cube3Anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)3.0,
+		donut1_anim.addChild( donut1);
+		donut1_xform.addChild( donut1_anim);
+		_scene_root.addChild( donut1_xform);
+
+		donut2.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
+		donut2.ctm().post_rot_x( (float)1.5708);
+		Group donut2_xform = new Group("DONUT2_XFORM");
+		donut2_xform.ctm().set_trans( (float)2.9, (float)0.0, (float)0.0);
+		Anim donut2_anim = new Anim("DONUT2_ANIM");
+		donut2_anim.initAnim( 
+			Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)2.8,
+			MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
+			MemMgr.Vec3f((float)0.0, (float)6.28318, (float)0.0) );
+		donut2_anim.addChild( donut2);
+		donut2_xform.addChild( donut2_anim);
+		_scene_root.addChild( donut2_xform);
+
+		donut3.ctm().set_scale( (float)1.6, (float)1.6, (float)1.6);
+		Group donut3_xform = new Group("DONUT3_XFORM");
+		donut3_xform.ctm().set_trans( (float)0.0, (float)0.0, (float)-2.9);
+		Anim donut3_anim = new Anim("DONUT3_ANIM");
+		donut3_anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)2.8,
+					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
+					MemMgr.Vec3f((float)6.28318, (float)0.0, (float)0.0) );
+		donut3_anim.addChild( donut3);
+		donut3_xform.addChild( donut3_anim);
+		_scene_root.addChild( donut3_xform);
+
+		sphere.ctm().set_scale( (float)1.3, (float)1.3, (float)1.3);
+		Group sphere_xform = new Group("SPHERE_GROUP");
+		sphere_xform.ctm().set_trans( (float)0.0, (float)0.0, (float)2.9);
+		Anim sphere_anim = new Anim("SPHERE_ANIM");
+		sphere_anim.initAnim( Anim.ROT, Anim.CONTINUOUS, (float)0.0, (float)99.0, (float)3.0,
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)0.0),
 					MemMgr.Vec3f((float)0.0, (float)0.0, (float)6.28318) );
-		cube3Anim.addChild( _obj3);
-		xform3.addChild( cube3Anim);
-		_scene_root.addChild( xform3);
+		sphere_anim.addChild( sphere);
+		sphere_xform.addChild( sphere_anim);
+		_scene_root.addChild( sphere_xform);
 		
 		_scene_root.addChild( wu_points);
 

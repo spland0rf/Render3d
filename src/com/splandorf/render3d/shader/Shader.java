@@ -118,24 +118,23 @@ public class Shader {
 			if (mat.TEXTURE == true) {
 
 				// Get light contribution at vertex 1
-				color = mat._color;
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-				Alg.normalize( n);
-				illuminate( n, light, lights);
+//				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
+//				Alg.normalize( n);
+				illuminate( t.v1.w_n, light, lights);
 				t.v1.r = ((int)((float)255.0 * light.x)<<16);
 				t.v1.g = ((int)((float)255.0 * light.y)<<16);
 				t.v1.b = ((int)((float)255.0 * light.z)<<16);
 				// Get light contribution at vertex 2
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-				Alg.normalize( n);
-				illuminate( n, light, lights);
+//				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
+//				Alg.normalize( n);
+				illuminate( t.v2.w_n, light, lights);
 				t.v2.r = ((int)((float)255.0 * light.x)<<16);
 				t.v2.g = ((int)((float)255.0 * light.y)<<16);
 				t.v2.b = ((int)((float)255.0 * light.z)<<16);
 				// Get light contribution at vertex 3
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-				Alg.normalize( n);
-				illuminate( n, light, lights);
+//				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
+//				Alg.normalize( n);
+				illuminate( t.v3.w_n, light, lights);
 				t.v3.r = ((int)((float)255.0 * light.x)<<16);
 				t.v3.g = ((int)((float)255.0 * light.y)<<16);
 				t.v3.b = ((int)((float)255.0 * light.z)<<16);
@@ -147,25 +146,25 @@ public class Shader {
 				}
 			} else {
 
-				// Get light contribution at vertex 1
 				color = mat._color;
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-				Alg.normalize( n);
-				illuminate( n, light, lights);
+				// Get light contribution at vertex 1
+//				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
+//				Alg.normalize( n);
+				illuminate( t.v1.w_n, light, lights);
 				t.v1.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
 				t.v1.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
 				t.v1.b = ((int)((float)( color      & 255) * light.z)<<16);
 				// Get light contribution at vertex 2
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-				Alg.normalize( n);
-				illuminate( n, light, lights);
+//				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
+//				Alg.normalize( n);
+				illuminate( t.v2.w_n, light, lights);
 				t.v2.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
 				t.v2.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
 				t.v2.b = ((int)((float)( color      & 255) * light.z)<<16);
 				// Get light contribution at vertex 3
-				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-				Alg.normalize( n);
-				illuminate( n, light, lights);
+//				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
+//				Alg.normalize( n);	
+				illuminate( t.v3.w_n, light, lights);
 				t.v3.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
 				t.v3.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
 				t.v3.b = ((int)((float)( color      & 255) * light.z)<<16);
