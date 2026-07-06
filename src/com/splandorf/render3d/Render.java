@@ -605,10 +605,12 @@ public class Render extends JPanel implements Runnable
 		Obj donut3 = GeometryFactory.makeTorus(4, 4, (float)0.75, (float)0.25, (float)0.0, (float)6.0, (float)0.0, (float)2.0);
 		donut3.setName( "RAINBOW_DONUT");
 		Material dtext3 = MemMgr.Material();
-		dtext3._lightmodel  = Material.FLAT;
+		dtext3._lightmodel  = Material.SOLID;
+		dtext3.SPEED = Material.FAST;
 		dtext3.TEXTURE = true;
 		dtext3._texture = loadTexture("res/textures/rainbowxholes2.gif", dtext3);
 		dtext3.TRANSPARENT = true;
+		dtext3._transp_G = 100;	
 		dtext3._transp_R = 100;
 		dtext3._transp_B = 100;
 		dtext3._transp_G = 100;	

@@ -554,8 +554,8 @@ public class SolidTriangle extends Shader
 
 		int lx = v1.x<<16;
 		int rx = v1.x<<16;
-		int lz = v1.z;
-		int rz = v1.z;
+		int lz = v1.zbuf;
+		int rz = v1.zbuf;
 		int ls = v1.s;
 		int rs = v1.s;
 		int lt = v1.t;
@@ -569,19 +569,19 @@ public class SolidTriangle extends Shader
 		int dt_1_2=0, dt_1_3=0, dt_2_3=0;
 		if (dy_1_2 != 0) {
 			dx_1_2 = ((v2.x<<16)-(v1.x<<16)) / dy_1_2;
-			dz_1_2 = (v2.z-v1.z) / dy_1_2;
+			dz_1_2 = (v2.zbuf-v1.zbuf) / dy_1_2;
 			ds_1_2 = (v2.s-v1.s) / dy_1_2;
 			dt_1_2 = (v2.t-v1.t) / dy_1_2;
 		}
 		if (dy_1_3 != 0) {
 			dx_1_3 = ((v3.x<<16)-(v1.x<<16)) / dy_1_3;
-			dz_1_3 = (v3.z-v1.z) / dy_1_3;
+			dz_1_3 = (v3.zbuf-v1.zbuf) / dy_1_3;
 			ds_1_3 = (v3.s-v1.s) / dy_1_3;
 			dt_1_3 = (v3.t-v1.t) / dy_1_3;
 		}
 		if (dy_2_3 != 0) {
 			dx_2_3 = ((v3.x<<16)-(v2.x<<16)) / dy_2_3;
-			dz_2_3 = (v3.z-v2.z) / dy_2_3;
+			dz_2_3 = (v3.zbuf-v2.zbuf) / dy_2_3;
 			ds_2_3 = (v3.s-v2.s) / dy_2_3;
 			dt_2_3 = (v3.t-v2.t) / dy_2_3;
 		}
@@ -610,7 +610,7 @@ public class SolidTriangle extends Shader
 		// This way, bottom half will *be* the whole, correct
 		// triangle in this special case.
 		rx = v2.x<<16;
-		rz = v2.z;
+		rz = v2.zbuf;
 		rs = v2.s;
 		rt = v2.t;
 

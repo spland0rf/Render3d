@@ -97,7 +97,6 @@ public class Shader {
 		int color = 0;
 		int red, green, blue; /* inten; */
 		float fog;
-		Vec3f n  = MemMgr.Vec3f();
 	
 		// TRANSP light model
 		if (mat._lightmodel == Material.TRANSP) {
@@ -118,22 +117,16 @@ public class Shader {
 			if (mat.TEXTURE == true) {
 
 				// Get light contribution at vertex 1
-//				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-//				Alg.normalize( n);
 				illuminate( t.v1.w_n, light, lights);
 				t.v1.r = ((int)((float)255.0 * light.x)<<16);
 				t.v1.g = ((int)((float)255.0 * light.y)<<16);
 				t.v1.b = ((int)((float)255.0 * light.z)<<16);
 				// Get light contribution at vertex 2
-//				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-//				Alg.normalize( n);
 				illuminate( t.v2.w_n, light, lights);
 				t.v2.r = ((int)((float)255.0 * light.x)<<16);
 				t.v2.g = ((int)((float)255.0 * light.y)<<16);
 				t.v2.b = ((int)((float)255.0 * light.z)<<16);
 				// Get light contribution at vertex 3
-//				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-//				Alg.normalize( n);
 				illuminate( t.v3.w_n, light, lights);
 				t.v3.r = ((int)((float)255.0 * light.x)<<16);
 				t.v3.g = ((int)((float)255.0 * light.y)<<16);
@@ -148,22 +141,16 @@ public class Shader {
 
 				color = mat._color;
 				// Get light contribution at vertex 1
-//				Alg.mult( t.obj.ctm().normal_ctm(), t.v1.n, n);
-//				Alg.normalize( n);
 				illuminate( t.v1.w_n, light, lights);
 				t.v1.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
 				t.v1.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
 				t.v1.b = ((int)((float)( color      & 255) * light.z)<<16);
 				// Get light contribution at vertex 2
-//				Alg.mult( t.obj.ctm().normal_ctm(), t.v2.n, n);
-//				Alg.normalize( n);
 				illuminate( t.v2.w_n, light, lights);
 				t.v2.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
 				t.v2.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
 				t.v2.b = ((int)((float)( color      & 255) * light.z)<<16);
 				// Get light contribution at vertex 3
-//				Alg.mult( t.obj.ctm().normal_ctm(), t.v3.n, n);
-//				Alg.normalize( n);	
 				illuminate( t.v3.w_n, light, lights);
 				t.v3.r = ((int)((float)((color>>16) & 255) * light.x)<<16);
 				t.v3.g = ((int)((float)((color>>8 ) & 255) * light.y)<<16);
@@ -300,15 +287,17 @@ public class Shader {
 			if (mat.TEXTURE == true) {
 				
 				// Find light contribution to face.
-				illuminate( n, light, lights);
+				illuminate( t.w_n, light, lights);
 				
-				color = mat._color;
 				red   = (int)((float)255.0 * light.x);
 				green = (int)((float)255.0 * light.y);
 				blue  = (int)((float)255.0 * light.z);
 				if (red  >255) red   = 255;
 				if (green>255) green = 255;
 				if (blue >255) blue  = 255;
+				if (red > 0 || green > 0 || blue > 0) {
+					int a=1;
+				}
 				mat._dif_R = red;
 				mat._dif_G = green;
 				mat._dif_B = blue;
@@ -321,7 +310,7 @@ public class Shader {
 			} else {
 			
 				// Find light contribution to face.
-				illuminate( n, light, lights);
+				illuminate( t.w_n, light, lights);
 				
 				color = mat._color;
 				red   = (int)((float)((color>>16) & 255) * light.x);
@@ -348,7 +337,6 @@ public class Shader {
 				SolidTriangle.drawSolidTriangle( t, mat._color, mat);
 			}
 		}
-		MemMgr.done( n);
 	}
 
 	public static void drawPointset( Mat4f m, ArrayList<Vertex> vlist, Material mat)
