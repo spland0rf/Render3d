@@ -31,7 +31,7 @@ public class SolidTriangle extends Shader
 
 		int lx = v1.x<<16;
 		int rx = v1.x<<16;
-		int lz = v1.z;
+		int lz = v1.zbuf;
 		int rz = v1.z;
 		int dy_1_2 = v2.y-v1.y;
 		int dy_1_3 = v3.y-v1.y;
@@ -40,15 +40,15 @@ public class SolidTriangle extends Shader
 		int dz_1_2=0, dz_1_3=0, dz_2_3=0;
 		if (dy_1_2 != 0) {
 			dx_1_2 = ((v2.x<<16)-(v1.x<<16)) / dy_1_2;
-			dz_1_2 = (v2.z-v1.z) / dy_1_2;
+			dz_1_2 = (v2.zbuf-v1.zbuf) / dy_1_2;
 		}
 		if (dy_1_3 != 0) {
 			dx_1_3 = ((v3.x<<16)-(v1.x<<16)) / dy_1_3;
-			dz_1_3 = (v3.z-v1.z) / dy_1_3;
+			dz_1_3 = (v3.zbuf-v1.zbuf) / dy_1_3;
 		}
 		if (dy_2_3 != 0) {
 			dx_2_3 = ((v3.x<<16)-(v2.x<<16)) / dy_2_3;
-			dz_2_3 = (v3.z-v2.z) / dy_2_3;
+			dz_2_3 = (v3.zbuf-v2.zbuf) / dy_2_3;
 		}
 
 		// Draw top half
@@ -70,7 +70,7 @@ public class SolidTriangle extends Shader
 		// This way, bottom half will *be* the whole, correct
 		// triangle in this special case.
 		rx = v2.x<<16;
-		rz = v2.z;
+		rz = v2.zbuf;	
 
 		// Draw bottom half
 		if (dy_2_3 != 0) {
@@ -119,7 +119,9 @@ public class SolidTriangle extends Shader
 		}
 
 		// Clipping against sides of screen;
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			lx = 0;
@@ -314,7 +316,9 @@ public class SolidTriangle extends Shader
 		float zinv = (float)0.0;
 
 		// Clip against sides of screen
-		if (rx >= _width) rx = _width-1;
+		if (rx >= _width) {
+			rx = _width-1;
+		}
 		if (lx < 0) {
 			z += -lx * dz;
 			s += -lx * ds;

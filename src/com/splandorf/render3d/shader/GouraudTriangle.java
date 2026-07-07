@@ -509,7 +509,7 @@ public class GouraudTriangle extends Shader
 		}
 	}
 
-		// Medium!  Texture-corrects every 16 pixels!
+	// Medium!  Texture-corrects every 16 pixels
 	public static void drawFast16gouraudTextureSpan( 
 		int y, int lx, int rx, float lz, float rz, 
 		float ls, float rs, float lt, float rt, 
